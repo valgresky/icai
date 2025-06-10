@@ -38,16 +38,19 @@ After sign-up URL: /
 Home URL: /
 ```
 
-### 3. Allowed Origins
+### 3. Allowed Origins (CRITICAL FOR FIXING CORS ERRORS)
 Go to **Configure > Restrictions** and add these origins:
 
 **Development:**
 - `http://localhost:3000`
 - `http://127.0.0.1:3000`
+- `https://localhost:3000` (if using HTTPS locally)
 
 **Production:**
 - `https://your-app-name.netlify.app`
 - Your custom domain with HTTPS
+
+⚠️ **IMPORTANT**: Make sure to include the protocol (`http://` or `https://`) when adding origins. Missing protocols are a common cause of CORS errors.
 
 ### 4. CORS Settings
 Ensure these are enabled in **Configure > CORS**:
@@ -91,8 +94,12 @@ After deploying to Netlify:
 ### Issue: "Invalid publishable key" error
 **Solution:** Make sure the environment variable is set correctly in Netlify
 
-### Issue: CORS errors in production
-**Solution:** Add your Netlify URL to Clerk's allowed origins
+### Issue: CORS errors in production (Clerk.js fetch errors)
+**Solution:** 
+1. Add your exact URL to Clerk's allowed origins in **Configure > Restrictions**
+2. Include the protocol (`http://` or `https://`)
+3. For localhost, add both `http://localhost:3000` and `http://127.0.0.1:3000`
+4. Wait 2-3 minutes after making changes for them to propagate
 
 ### Issue: Redirect loops
 **Solution:** Check that your redirect URLs in Clerk match your actual routes
@@ -105,12 +112,26 @@ After deploying to Netlify:
 Before going live:
 - [ ] All environment variables set in Netlify
 - [ ] Netlify URL added to Clerk domains
+- [ ] **`http://localhost:3000` added to Clerk allowed origins for development**
 - [ ] Redirect URLs configured in Clerk
-- [ ] CORS origins set in Clerk
+- [ ] CORS origins set in Clerk (with proper protocols)
 - [ ] Test authentication flows work
 - [ ] Check browser console for errors
 - [ ] Verify Supabase connection works
 - [ ] Test Stripe payments (if applicable)
+
+## 🛠️ Immediate Fix for Current Error
+
+To fix the current Clerk.js fetch error:
+
+1. Go to your [Clerk Dashboard](https://dashboard.clerk.com/)
+2. Navigate to **Configure > Restrictions** (or **Configure > Domains** in some versions)
+3. In the "Allowed Origins" section, add:
+   - `http://localhost:3000`
+   - `http://127.0.0.1:3000`
+4. Save the changes
+5. Wait 2-3 minutes for the changes to propagate
+6. Refresh your localhost:3000 page
 
 ## 🔗 Quick Links
 
