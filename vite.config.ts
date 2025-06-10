@@ -23,6 +23,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    host: true
+    host: 'inner-circle-ai.com',
+    https: false
   }
 });

@@ -20,10 +20,10 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 In your Clerk dashboard, go to **Configure > Domains** and add:
 
 **Development:**
-- `localhost:3000`
-- `127.0.0.1:3000`
+- `inner-circle-ai.com`
+- `https://inner-circle-ai.com`
 
-**Production (replace with your actual Netlify URL):**
+**Production:**
 - `your-app-name.netlify.app`
 - Your custom domain if you have one
 
@@ -42,9 +42,8 @@ Home URL: /
 Go to **Configure > Restrictions** and add these origins:
 
 **Development:**
-- `http://localhost:3000`
-- `http://127.0.0.1:3000`
-- `https://localhost:3000` (if using HTTPS locally)
+- `https://inner-circle-ai.com`
+- `http://inner-circle-ai.com`
 
 **Production:**
 - `https://your-app-name.netlify.app`
@@ -55,7 +54,7 @@ Go to **Configure > Restrictions** and add these origins:
 ### 4. CORS Settings
 Ensure these are enabled in **Configure > CORS**:
 - Allow credentials: ✅ Enabled
-- Allowed origins: Add your Netlify URLs
+- Allowed origins: Add your domain URLs
 - Allowed methods: GET, POST, PUT, DELETE, OPTIONS
 - Allowed headers: Authorization, Content-Type
 
@@ -76,10 +75,9 @@ Your `netlify.toml` is already configured, but make sure these settings are corr
 
 ## 🔍 Testing Steps
 
-### 1. Local Testing
-```bash
-npm run dev
-```
+### 1. Development Testing
+Access your app at:
+- `https://inner-circle-ai.com`
 - Test sign-in/sign-up flows
 - Verify authentication works
 
@@ -98,7 +96,7 @@ After deploying to Netlify:
 **Solution:** 
 1. Add your exact URL to Clerk's allowed origins in **Configure > Restrictions**
 2. Include the protocol (`http://` or `https://`)
-3. For localhost, add both `http://localhost:3000` and `http://127.0.0.1:3000`
+3. For inner-circle-ai.com, add both `https://inner-circle-ai.com` and `http://inner-circle-ai.com`
 4. Wait 2-3 minutes after making changes for them to propagate
 
 ### Issue: Redirect loops
@@ -112,7 +110,7 @@ After deploying to Netlify:
 Before going live:
 - [ ] All environment variables set in Netlify
 - [ ] Netlify URL added to Clerk domains
-- [ ] **`http://localhost:3000` added to Clerk allowed origins for development**
+- [ ] **`https://inner-circle-ai.com` added to Clerk allowed origins**
 - [ ] Redirect URLs configured in Clerk
 - [ ] CORS origins set in Clerk (with proper protocols)
 - [ ] Test authentication flows work
@@ -127,11 +125,11 @@ To fix the current Clerk.js fetch error:
 1. Go to your [Clerk Dashboard](https://dashboard.clerk.com/)
 2. Navigate to **Configure > Restrictions** (or **Configure > Domains** in some versions)
 3. In the "Allowed Origins" section, add:
-   - `http://localhost:3000`
-   - `http://127.0.0.1:3000`
+   - `https://inner-circle-ai.com`
+   - `http://inner-circle-ai.com`
 4. Save the changes
 5. Wait 2-3 minutes for the changes to propagate
-6. Refresh your localhost:3000 page
+6. Refresh your inner-circle-ai.com page
 
 ## 🔗 Quick Links
 
