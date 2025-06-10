@@ -4,18 +4,31 @@
 
 Your app is currently using placeholder values. You need to replace them with real keys:
 
-### 1. Clerk Setup (Primary Authentication)
-1. Go to [Clerk Dashboard](https://clerk.com/dashboard)
-2. Create a new application or use existing one
-3. Go to API Keys section
-4. Copy your **Publishable Key** and **Secret Key**
-5. Replace the values in `.env` file:
-   ```
-   VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key_here
-   CLERK_SECRET_KEY=sk_test_your_clerk_secret_key_here
-   ```
+### 1. Clerk Setup (Primary Authentication) ✅ DONE
+From your Clerk dashboard, I can see you have:
+- **Publishable Key**: `pk_live_Y2xlcmsuaW5uZXItY2lyY2xlLWFpLmNvbSQ` ✅
+- **Frontend API URL**: `https://clerk.inner-circle-ai.com` ✅
+- **Backend API URL**: `https://api.clerk.com` ✅
 
-### 2. Supabase Setup (Database & Edge Functions)
+You still need to add your **Secret Key** to the `.env` file:
+```
+CLERK_SECRET_KEY=sk_live_your_secret_key_here
+```
+
+### 2. Configure Clerk Domain Settings
+In your Clerk dashboard:
+1. Go to **Configure > Domains**
+2. Add your domains:
+   - `localhost:3000` (for development)
+   - Your production domain (e.g., `your-app.netlify.app`)
+3. Go to **Configure > Paths**
+4. Set up redirect URLs:
+   - Sign-in URL: `/`
+   - Sign-up URL: `/`
+   - After sign-in URL: `/`
+   - After sign-up URL: `/`
+
+### 3. Supabase Setup (Database & Edge Functions)
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
 2. Create a new project or use existing one
 3. Go to Settings > API
@@ -27,24 +40,14 @@ Your app is currently using placeholder values. You need to replace them with re
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
    ```
 
-### 3. Stripe Setup (for payments)
+### 4. Stripe Setup (for payments)
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
 2. Get your **Secret Key** from API keys section
 3. Set up webhooks and get **Webhook Secret**
 4. Replace the values in `.env` file
 
-### 4. Configure Clerk Authentication
-In your Clerk dashboard:
-1. Go to Configure > Paths
-2. Set up your redirect URLs for development and production
-3. Configure sign-in/sign-up settings
-4. Enable email/password authentication
-
-### 5. Configure Supabase for Clerk Integration
-In your Supabase dashboard:
-1. Go to Settings > API
-2. Add your domain (localhost:3000 for development)
-3. The Stripe checkout edge function is configured to work with Clerk tokens
+### 5. Update Supabase Edge Functions for Clerk
+The Stripe checkout edge function needs to be updated to work with Clerk tokens instead of Supabase auth. This is already configured in the codebase.
 
 ## 🔧 Development
 ```bash
@@ -56,9 +59,10 @@ npm run dev
 See `DEPLOYMENT.md` for production deployment instructions.
 
 ## ⚠️ Important Notes
-- Never commit real API keys to GitHub
-- Use test keys for development
-- Use live keys only for production
-- Keep your `.env` file in `.gitignore`
+- Your Clerk publishable key is already configured ✅
+- You need to add your Clerk secret key to complete the setup
+- Configure your domains in Clerk dashboard
 - The app uses Clerk for authentication and Supabase for database/edge functions
 - Stripe checkout is handled via Supabase edge functions with Clerk token verification
+- Never commit real API keys to GitHub
+- Use test keys for development, live keys for production
