@@ -15,7 +15,7 @@ import NotFoundPage from './pages/NotFoundPage';
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 // If Clerk is not configured, show a setup message
-if (!clerkPubKey || clerkPubKey === 'pk_test_your_key_here') {
+if (!clerkPubKey || clerkPubKey === 'pk_test_your_key_here' || clerkPubKey === 'pk_live_your_key_here') {
   console.warn('Clerk not configured. Please set VITE_CLERK_PUBLISHABLE_KEY in your environment variables.');
 }
 
@@ -42,7 +42,7 @@ const SetupRequired = () => (
       <div className="bg-neutral-800 p-4 rounded-lg text-left text-sm">
         <p className="text-neutral-400 mb-2">Add to your .env file:</p>
         <code className="text-green-400">
-          VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_actual_key_here
+          VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_actual_key_here
         </code>
       </div>
     </div>
@@ -51,7 +51,7 @@ const SetupRequired = () => (
 
 function App() {
   // If Clerk is not properly configured, show setup screen
-  if (!clerkPubKey || clerkPubKey === 'pk_test_your_key_here') {
+  if (!clerkPubKey || clerkPubKey === 'pk_test_your_key_here' || clerkPubKey === 'pk_live_your_key_here') {
     return <SetupRequired />;
   }
 
