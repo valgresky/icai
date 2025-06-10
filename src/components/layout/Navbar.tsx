@@ -112,7 +112,7 @@ const Navbar = () => {
           <SignedOut>
             <div className="flex items-center gap-2">
               <SignInButton mode="modal" fallbackRedirectUrl="/" signUpFallbackRedirectUrl="/">
-                <button className="btn btn-ghost flex items-center gap-2" data-clerk-sign-in>
+                <button className="btn btn-ghost flex items-center gap-2">
                   <User className="w-4 h-4" />
                   Sign In
                 </button>
