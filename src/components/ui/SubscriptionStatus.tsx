@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Crown, Calendar, CreditCard } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { supabase } from '../../lib/supabase';
 
 interface SubscriptionData {
   subscription_status: string;
@@ -14,7 +14,24 @@ interface SubscriptionData {
 const SubscriptionStatus = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user } = useUser();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Get current user
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    
+    getCurrentUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -26,20 +43,17 @@ const SubscriptionStatus = () => {
     if (!user) return;
     
     try {
-      const token = await user.getToken();
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/stripe_user_subscriptions`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json',
-        },
-      });
+      const { data, error } = await supabase
+        .from('stripe_user_subscriptions')
+        .select('*')
+        .single();
 
-      if (response.ok) {
-        const data = await response.json();
-        setSubscription(data[0] || null);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching subscription:', error);
+        return;
       }
+
+      setSubscription(data || null);
     } catch (error) {
       console.error('Error fetching subscription:', error);
     } finally {

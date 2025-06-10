@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Download, Tag, User, Calendar, ShoppingCart, Loader } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { supabase } from '../../lib/supabase';
 import { formatDate, formatCurrency } from '../../utils/helpers';
 
 interface WorkflowModalProps {
@@ -28,7 +28,24 @@ interface WorkflowModalProps {
 
 const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
   const [purchaseLoading, setPurchaseLoading] = useState(false);
-  const { user } = useUser();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Get current user
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    
+    getCurrentUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Close on escape key
   useEffect(() => {
@@ -58,23 +75,27 @@ const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
     }
 
     if (!user) {
-      // Trigger Clerk sign-in modal
-      const signInButton = document.querySelector('[data-clerk-sign-in]') as HTMLButtonElement;
-      signInButton?.click();
+      // Redirect to sign in or trigger auth modal
+      alert('Please sign in to purchase this workflow.');
       return;
     }
 
     setPurchaseLoading(true);
     
     try {
-      // Get Clerk session token
-      const token = await user.getToken();
+      // Get Supabase session token
+      const { data: { session } } = await supabase.auth.getSession();
       
+      if (!session) {
+        alert('Please sign in to purchase this workflow.');
+        return;
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           price_id: workflow.stripeProductId,
