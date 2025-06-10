@@ -40,32 +40,11 @@
 3. Add these variables:
 
 ```
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_key
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key
+STRIPE_SECRET_KEY=sk_live_your_stripe_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 ```
-
-### For Production Clerk Keys:
-- Use `pk_live_` keys instead of `pk_test_`
-- Update your Clerk dashboard with your Vercel domain
-
-## 🔐 Clerk Configuration for Production
-
-### 1. Update Clerk Settings
-In your Clerk Dashboard:
-
-1. **Go to Configure > Paths**:
-   - Sign-in URL: `https://yourdomain.vercel.app`
-   - Sign-up URL: `https://yourdomain.vercel.app`
-   - After sign-in URL: `https://yourdomain.vercel.app`
-   - After sign-up URL: `https://yourdomain.vercel.app`
-
-2. **Go to Configure > Domains**:
-   - Add your Vercel domain: `yourdomain.vercel.app`
-   - Add your custom domain if you have one
-
-3. **Update Environment Variables**:
-   - Use your **production** Clerk keys (pk_live_... and sk_live_...)
 
 ## 🗄️ Supabase Configuration
 
@@ -74,7 +53,12 @@ In your Clerk Dashboard:
    - Add your Vercel domain to **Site URL**
    - Add your domain to **Redirect URLs**
 
-2. **Edge Functions**:
+2. **Authentication Settings**:
+   - Go to Authentication > Settings
+   - Add your production domain to allowed origins
+   - Configure email templates for production
+
+3. **Edge Functions**:
    - Your Stripe webhook and checkout functions are already deployed
    - Update any hardcoded URLs to use your production domain
 
@@ -100,7 +84,7 @@ Add your production webhook endpoint in Stripe Dashboard:
 ## 🔍 Testing Checklist
 
 Before going live, test:
-- [ ] Sign up/Sign in flows work
+- [ ] Sign up/Sign in flows work with Supabase Auth
 - [ ] Purchase flows complete successfully
 - [ ] Webhooks receive and process events
 - [ ] User dashboard shows correct data
@@ -111,7 +95,7 @@ Before going live, test:
 ## 🚨 Important Notes
 
 1. **Environment Variables**: Never commit real API keys to your repository
-2. **Clerk Keys**: Use `pk_live_` and `sk_live_` keys for production
+2. **Supabase Auth**: The app now uses Supabase authentication instead of Clerk
 3. **Stripe Keys**: Use live Stripe keys for production payments
 4. **Testing**: Always test the complete purchase flow before launch
 5. **Monitoring**: Set up error monitoring (Sentry, LogRocket, etc.)
@@ -119,9 +103,9 @@ Before going live, test:
 ## 🆘 Troubleshooting
 
 ### Sign-in Issues:
-- Check Clerk domain configuration
+- Check Supabase authentication configuration
 - Verify environment variables are set correctly
-- Ensure fallback URLs match your domain
+- Ensure redirect URLs match your domain
 
 ### Payment Issues:
 - Verify Stripe webhook is receiving events
