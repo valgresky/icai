@@ -28,14 +28,20 @@ In your Clerk dashboard:
    - After sign-in URL: `/`
    - After sign-up URL: `/`
 
-### 3. Configure Clerk CORS Settings (CRITICAL)
+### 3. Configure Clerk CORS Settings (CRITICAL) - IMMEDIATE FIX NEEDED
 In your Clerk dashboard:
 1. Go to **Configure > Restrictions**
-2. In the "Allowed Origins" section, add:
+2. In the "Allowed Origins" section, add ALL of these URLs:
+   - `http://localhost:3000` ⚠️ **ADD THIS NOW**
+   - `https://localhost:3000` ⚠️ **ADD THIS NOW**
+   - `http://inner-circle-ai.com:3000` ⚠️ **ADD THIS NOW**
+   - `https://inner-circle-ai.com:3000` ⚠️ **ADD THIS NOW**
    - `https://inner-circle-ai.com`
    - `http://inner-circle-ai.com`
    - Your Netlify URL (e.g., `https://your-app.netlify.app`)
 3. Save and wait 2-3 minutes for changes to propagate
+
+**🚨 IMMEDIATE ACTION REQUIRED**: The current CORS error is because `localhost:3000` is not in your Clerk allowed origins. Add it now to fix the authentication issue.
 
 ### 4. Supabase Setup (Database & Edge Functions)
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
@@ -64,7 +70,9 @@ npm install
 npm run dev
 ```
 
-Access your app at: `https://inner-circle-ai.com`
+Access your app at: 
+- `http://localhost:3000` (if accessing via localhost)
+- `http://inner-circle-ai.com:3000` (if accessing via custom host)
 
 ## 🚀 Deployment
 See `DEPLOYMENT.md` for production deployment instructions.
@@ -78,10 +86,17 @@ See `DEPLOYMENT.md` for production deployment instructions.
 - Never commit real API keys to GitHub
 - Use test keys for development, live keys for production
 
-## 🛠️ Quick Fix for CORS Error
-If you're getting Clerk.js fetch errors:
+## 🛠️ Quick Fix for Current CORS Error
+**IMMEDIATE STEPS TO FIX THE ERROR:**
+
 1. Go to [Clerk Dashboard](https://dashboard.clerk.com/)
 2. Navigate to **Configure > Restrictions**
-3. Add `https://inner-circle-ai.com` and `http://inner-circle-ai.com` to allowed origins
+3. Add these URLs to allowed origins:
+   - `http://localhost:3000`
+   - `https://localhost:3000`
+   - `http://inner-circle-ai.com:3000`
+   - `https://inner-circle-ai.com:3000`
 4. Save and wait 2-3 minutes
-5. Refresh your page
+5. Refresh your browser page
+
+**Why this happens**: Your local development server needs to be explicitly allowed to make requests to Clerk's API. Without these origins in the allowlist, browsers block the requests due to CORS policy.
