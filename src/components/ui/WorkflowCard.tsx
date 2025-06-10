@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, Copy, Check, Wrench, ShoppingCart, Loader } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { useUser } from '@clerk/clerk-react';
 import { formatCurrency } from '../../utils/helpers';
 import WorkflowModal from './WorkflowModal';
 
@@ -43,25 +43,8 @@ const WorkflowCard = ({
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useUser();
   const isFree = price === 0 || price === null;
-
-  useEffect(() => {
-    // Get current user
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    
-    getCurrentUser();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleCopy = async () => {
     if (code) {
@@ -82,27 +65,23 @@ const WorkflowCard = ({
     }
 
     if (!user) {
-      // Redirect to sign in or trigger auth modal
-      alert('Please sign in to purchase this workflow.');
+      // Trigger Clerk sign-in modal
+      const signInButton = document.querySelector('[data-clerk-sign-in]') as HTMLButtonElement;
+      signInButton?.click();
       return;
     }
 
     setPurchaseLoading(true);
     
     try {
-      // Get Supabase session token
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get Clerk session token
+      const token = await user.getToken();
       
-      if (!session) {
-        alert('Please sign in to purchase this workflow.');
-        return;
-      }
-
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           price_id: stripeProductId,

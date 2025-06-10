@@ -2,21 +2,20 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Workflow, Search, ShoppingCart, User, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SignInButton, SignUpButton, UserButton, useUser, SignedIn, SignedOut } from '@clerk/clerk-react';
 import { cn } from '../../utils/helpers';
 import { useTheme } from '../../hooks/useTheme';
 import { useCart } from '../../contexts/CartContext';
-import { useAuth } from '../../contexts/AuthContext';
 import CartDrawer from '../ui/CartDrawer';
-import AuthModal from '../ui/AuthModal';
+import SubscriptionStatus from '../ui/SubscriptionStatus';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user } = useUser();
   const { state } = useCart();
 
   const links = [
@@ -98,22 +97,34 @@ const Navbar = () => {
             )}
           </button>
           
-          {user ? (
+          <SignedIn>
+            <SubscriptionStatus />
+            <UserButton 
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8"
+                }
+              }}
+              afterSignOutUrl="/"
+            />
+          </SignedIn>
+          
+          <SignedOut>
             <div className="flex items-center gap-2">
-              <span className="text-sm">Welcome, {user.email}</span>
-              <button onClick={signOut} className="btn btn-ghost">
-                Sign Out
-              </button>
+              <SignInButton mode="modal" fallbackRedirectUrl="/" signUpFallbackRedirectUrl="/">
+                <button className="btn btn-ghost flex items-center gap-2" data-clerk-sign-in>
+                  <User className="w-4 h-4" />
+                  Sign In
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal" fallbackRedirectUrl="/" signInFallbackRedirectUrl="/">
+                <button className="btn btn-primary flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Sign Up
+                </button>
+              </SignUpButton>
             </div>
-          ) : (
-            <button 
-              onClick={() => setIsAuthModalOpen(true)}
-              className="btn btn-primary flex items-center gap-2"
-            >
-              <User className="w-4 h-4" />
-              Sign In
-            </button>
-          )}
+          </SignedOut>
         </div>
 
         {/* Mobile Menu Button */}
@@ -176,22 +187,38 @@ const Navbar = () => {
                 <span>Cart ({state.items.length})</span>
               </button>
               
-              {user ? (
+              <SignedIn>
                 <div className="space-y-2">
-                  <div className="px-4 py-2 text-sm">Welcome, {user.email}</div>
-                  <button onClick={signOut} className="btn-ghost w-full justify-start">
-                    Sign Out
-                  </button>
+                  <SubscriptionStatus />
+                  <div className="flex justify-center">
+                    <UserButton 
+                      appearance={{
+                        elements: {
+                          avatarBox: "w-10 h-10"
+                        }
+                      }}
+                      afterSignOutUrl="/"
+                    />
+                  </div>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="btn-primary w-full justify-center"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Sign In
-                </button>
-              )}
+              </SignedIn>
+              
+              <SignedOut>
+                <div className="space-y-2">
+                  <SignInButton mode="modal" fallbackRedirectUrl="/" signUpFallbackRedirectUrl="/">
+                    <button className="btn-ghost w-full justify-center">
+                      <User className="w-4 h-4 mr-2" />
+                      Sign In
+                    </button>
+                  </SignInButton>
+                  <SignUpButton mode="modal" fallbackRedirectUrl="/" signInFallbackRedirectUrl="/">
+                    <button className="btn-primary w-full justify-center">
+                      <User className="w-4 h-4 mr-2" />
+                      Sign Up
+                    </button>
+                  </SignUpButton>
+                </div>
+              </SignedOut>
             </div>
           </motion.div>
         )}
@@ -199,9 +226,6 @@ const Navbar = () => {
 
       {/* Cart Drawer */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-      
-      {/* Auth Modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </header>
   );
 };
