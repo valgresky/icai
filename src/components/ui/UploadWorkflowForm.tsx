@@ -97,6 +97,5 @@ const UploadWorkflowForm = ({ onUpload }: UploadWorkflowFormProps) => {
   );
 };
 
-export default UploadWorkflowForm;
 
 export { UploadWorkflowForm }

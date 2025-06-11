@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, Copy, Check, Wrench, ShoppingCart, Loader } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import { formatCurrency } from '../../utils/helpers';
 import WorkflowModal from './WorkflowModal';
 
@@ -44,6 +44,7 @@ const WorkflowCard = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const { user } = useUser();
+  const { getToken } = useAuth();
   const isFree = price === 0 || price === null;
 
   const handleCopy = async () => {
@@ -75,7 +76,11 @@ const WorkflowCard = ({
     
     try {
       // Get Clerk session token
-      const token = await user.getToken();
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Unable to authenticate. Please try signing in again.');
+      }
       
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
         method: 'POST',

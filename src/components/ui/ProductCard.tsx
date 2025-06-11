@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Loader, Check, AlertCircle } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 
 interface ProductCardProps {
   priceId: string;
@@ -16,9 +16,16 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const { user } = useUser();
+  const { getToken } = useAuth();
 
   const handlePurchase = async () => {
+    console.log('=== CHECKOUT ATTEMPT ===');
+    console.log('Price ID:', priceId);
+    console.log('User:', user);
+    console.log('User ID:', user?.id);
+    
     if (!user) {
+      console.error('No user found, redirecting to sign in');
       // Redirect to sign in if not authenticated
       window.location.href = '/sign-in';
       return;
@@ -28,13 +35,18 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
     setError('');
     
     try {
-      // Get Clerk session token
-      const token = await user.getToken();
+      console.log('Getting Clerk session token...');
+      
+      // Use the getToken from useAuth hook instead of user.getToken
+      const token = await getToken();
+      
+      console.log('Token obtained:', token ? 'Yes' : 'No');
       
       if (!token) {
         throw new Error('Unable to authenticate. Please try signing in again.');
       }
 
+      console.log('Creating checkout session...');
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
         method: 'POST',
         headers: {
@@ -49,26 +61,33 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
         }),
       });
 
+      console.log('Checkout response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Checkout error response:', errorData);
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Checkout response data:', data);
 
       if (data.error) {
         throw new Error(data.error);
       }
 
       if (data.url) {
+        console.log('Redirecting to Stripe:', data.url);
         // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else {
-        throw new Error('No checkout URL received');
+        console.error('No checkout URL received:', data);
+        throw new Error('No checkout URL received from server');
       }
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      setError(error instanceof Error ? error.message : 'Failed to start checkout. Please try again.');
+      console.error('Full checkout error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start checkout. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

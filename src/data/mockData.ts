@@ -1,4 +1,4 @@
-export interface Workflow {
+interface Workflow {
   id: string;
   title: string;
   description: string;
@@ -18,7 +18,7 @@ export interface Workflow {
   stripeProductId?: string;
 }
 
-export interface Category {
+interface Category {
   id: string;
   name: string;
   description: string;
@@ -26,7 +26,7 @@ export interface Category {
   count: number;
 }
 
-export interface Testimonial {
+interface Testimonial {
   id: string;
   content: string;
   author: string;

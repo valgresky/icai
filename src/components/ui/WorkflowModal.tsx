@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Download, Tag, User, Calendar, ShoppingCart, Loader } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import { formatDate, formatCurrency } from '../../utils/helpers';
 
 interface WorkflowModalProps {
@@ -29,6 +29,7 @@ interface WorkflowModalProps {
 const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const { user } = useUser();
+  const { getToken } = useAuth();
 
   // Close on escape key
   useEffect(() => {
@@ -67,8 +68,12 @@ const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
     setPurchaseLoading(true);
     
     try {
-      // Get Clerk session token
-      const token = await user.getToken();
+      // Get Clerk session token using the useAuth hook
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Unable to authenticate. Please try signing in again.');
+      }
       
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
         method: 'POST',

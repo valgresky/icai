@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Crown, Calendar, CreditCard, AlertCircle } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 
 interface SubscriptionData {
   subscription_status: string;
@@ -16,6 +16,7 @@ const planNames: Record<string, string> = {
   'price_1RYXIaQqrelvc6fFsWaE3YTV': 'Workflow Club Monthly',
   'price_1RYXJ9Qqrelvc6fF5KWqwhKj': 'Workflow Club Yearly',
   'price_1RYXLEQqrelvc6fFzVCHcPgt': 'Custom Development',
+  'price_1RYXJtQqrelvc6fFVYVxxLqo': 'Enterprise Support',
 };
 
 const SubscriptionStatus = () => {
@@ -23,6 +24,7 @@ const SubscriptionStatus = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useUser();
+  const { getToken } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -34,7 +36,10 @@ const SubscriptionStatus = () => {
     if (!user) return;
     
     try {
-      const token = await user.getToken();
+      console.log('Fetching subscription for user:', user.id);
+      
+      // Use getToken from useAuth hook instead of user.getToken
+      const token = await getToken();
       
       if (!token) {
         setError('Unable to authenticate');
@@ -51,6 +56,7 @@ const SubscriptionStatus = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Subscription data:', data);
         setSubscription(data[0] || null);
       } else {
         console.error('Failed to fetch subscription:', response.status);

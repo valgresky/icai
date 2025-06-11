@@ -22,7 +22,7 @@ export function formatCurrency(amount: number): string {
 }
 
 // Generate random id
-export function generateId(length: number = 8): string {
+function generateId(length: number = 8): string {
   return Math.random().toString(36).substring(2, length + 2);
 }
 
@@ -37,7 +37,7 @@ export function formatDate(date: Date | string): string {
 }
 
 // Truncate text
-export function truncateText(text: string, maxLength: number): string {
+function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + '...';
 }
