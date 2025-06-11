@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Globe, 
   Play, 
@@ -17,7 +17,10 @@ import {
   EyeOff,
   Maximize2,
   MessageSquare,
-  Send
+  Send,
+  Minimize2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface BrowserSession {
@@ -45,6 +48,11 @@ const BrowserAgentPage = () => {
   const [showBrowser, setShowBrowser] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionActive, setSessionActive] = useState(false);
+  const [isIframeLoading, setIsIframeLoading] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState('');
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [browserViewHeight, setBrowserViewHeight] = useState(500);
+  const [isTyping, setIsTyping] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -71,10 +79,6 @@ const BrowserAgentPage = () => {
     {
       url: 'https://news.ycombinator.com',
       instructions: 'Extract the top 5 trending tech stories'
-    },
-    {
-      url: 'https://www.linkedin.com',
-      instructions: 'Navigate to the jobs section and search for remote developer positions'
     }
   ];
 
@@ -151,28 +155,57 @@ const BrowserAgentPage = () => {
     setIsLoading(true);
     setSessionActive(true);
     setMessages([]); // Clear previous messages
+    setCurrentUrl(url);
 
     // Add initial user message
     addMessage('user', `Starting automation for ${new URL(url).hostname}...`);
     addMessage('system', `📍 URL: ${url}`);
     addMessage('system', `📝 Task: ${instructions}`);
+    
+    // Show typing indicator
+    setIsTyping(true);
     addMessage('loading', 'Initializing browser session...');
 
     try {
-      // Simulate progress updates
-      setTimeout(() => addMessage('success', 'Browser session started'), 1000);
-      setTimeout(() => addMessage('loading', 'Navigating to website...'), 2000);
-      setTimeout(() => addMessage('success', 'Page loaded successfully'), 3500);
-      setTimeout(() => addMessage('loading', 'Performing requested actions...'), 4500);
+      // Simulate progress updates with typing indicators
+      setTimeout(() => {
+        setIsTyping(false);
+        addMessage('success', 'Browser session started');
+        setIsTyping(true);
+      }, 1000);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        addMessage('loading', 'Navigating to website...');
+        setIsTyping(true);
+      }, 2000);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        addMessage('success', 'Page loaded successfully');
+        setIsTyping(true);
+      }, 3500);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        addMessage('loading', 'Performing requested actions...');
+      }, 4500);
 
       const sessionData = await startBrowserSession(url, instructions);
       setSession(sessionData);
       setSessionStartTime(new Date());
+      setIsIframeLoading(true);
       
-      addMessage('success', 'Task completed successfully!');
-      addMessage('system', '🔗 Live browser view is now available');
+      setTimeout(() => {
+        setIsTyping(false);
+        addMessage('success', 'Task completed successfully!');
+        addMessage('system', '🔗 Live browser view is now available');
+        setShowBrowser(true);
+        setIsIframeLoading(false);
+      }, 6000);
       
     } catch (error) {
+      setIsTyping(false);
       addMessage('error', 'Failed to start browser session. Please try again.');
       setSessionActive(false);
       console.error('Session error:', error);
@@ -205,6 +238,8 @@ const BrowserAgentPage = () => {
     setError('');
     setCopied(false);
     setMessages([]);
+    setCurrentUrl('');
+    setIsTyping(false);
   };
 
   const fillExample = (example: typeof examples[0]) => {
@@ -223,7 +258,9 @@ const BrowserAgentPage = () => {
 
   const refreshIframe = () => {
     if (iframeRef.current) {
+      setIsIframeLoading(true);
       iframeRef.current.src = iframeRef.current.src;
+      setTimeout(() => setIsIframeLoading(false), 2000);
     }
   };
 
@@ -252,22 +289,22 @@ const BrowserAgentPage = () => {
             </p>
           </motion.div>
 
-          {/* Main Layout */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Input Form - Left Column */}
+          {/* Bento Box Grid Layout */}
+          <div className="bento-grid">
+            {/* Browser Session Form - Top Left */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="xl:col-span-1"
+              className="bento-panel"
             >
-              <div className="glass-panel p-6 h-fit">
+              <div className="glass-panel p-6 h-full flex flex-col">
                 <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                   <Zap className="w-5 h-5 text-primary-500" />
                   Browser Session
                 </h2>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6 flex-1">
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Website URL
@@ -285,7 +322,7 @@ const BrowserAgentPage = () => {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="flex-1">
                     <label className="block text-sm font-medium mb-2">
                       Instructions for AI Agent
                     </label>
@@ -293,8 +330,8 @@ const BrowserAgentPage = () => {
                       value={instructions}
                       onChange={(e) => setInstructions(e.target.value)}
                       placeholder="Describe what you want the browser to do..."
-                      rows={4}
-                      className="glass-card w-full p-3 resize-none"
+                      rows={6}
+                      className="glass-card w-full p-3 resize-none h-full"
                       disabled={isLoading || sessionActive}
                     />
                   </div>
@@ -340,20 +377,20 @@ const BrowserAgentPage = () => {
 
                 {/* Quick Examples */}
                 {!sessionActive && (
-                  <div className="mt-6">
+                  <div className="mt-4 pt-4 border-t border-neutral-800">
                     <h3 className="text-sm font-medium mb-3 text-neutral-400">Quick Examples:</h3>
                     <div className="space-y-2">
-                      {examples.slice(0, 3).map((example, index) => (
+                      {examples.slice(0, 2).map((example, index) => (
                         <button
                           key={index}
                           onClick={() => fillExample(example)}
-                          className="text-left p-3 rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors text-sm w-full"
+                          className="text-left p-2 rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors text-xs w-full"
                           disabled={isLoading}
                         >
                           <div className="font-medium text-primary-400 mb-1">
                             {new URL(example.url).hostname}
                           </div>
-                          <div className="text-neutral-300 line-clamp-2">
+                          <div className="text-neutral-300 line-clamp-1">
                             {example.instructions}
                           </div>
                         </button>
@@ -364,15 +401,16 @@ const BrowserAgentPage = () => {
               </div>
             </motion.div>
 
-            {/* Chat Interface - Middle Column */}
+            {/* Chat Interface - Top Right */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              className="xl:col-span-1"
+              className="bento-panel"
             >
-              <div className="glass-panel p-6 h-[600px] flex flex-col">
-                <div className="flex items-center justify-between mb-4">
+              <div className="glass-panel p-6 h-full flex flex-col">
+                {/* Chat Header - Sticky */}
+                <div className="flex items-center justify-between mb-4 bg-background-secondary/50 backdrop-blur-sm -m-6 p-6 rounded-t-xl border-b border-neutral-800/50">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <MessageSquare className="w-5 h-5 text-secondary-500" />
                     Browser Agent
@@ -399,7 +437,7 @@ const BrowserAgentPage = () => {
                 </div>
 
                 {/* Chat Messages */}
-                <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+                <div className="flex-1 overflow-y-auto space-y-3 px-1">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mb-4">
@@ -411,200 +449,205 @@ const BrowserAgentPage = () => {
                       </p>
                     </div>
                   ) : (
-                    messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg ${
-                          message.type === 'user' 
-                            ? 'bg-primary-500/10 border border-primary-500/20' 
-                            : 'bg-neutral-800/50'
-                        }`}
-                      >
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-xs">
-                          {message.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-sm ${messageTypes[message.type].color}`}>
-                            {message.content}
+                    <>
+                      {messages.map((message) => (
+                        <motion.div
+                          key={message.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`flex items-start gap-3 p-3 rounded-lg ${
+                            message.type === 'user' 
+                              ? 'bg-primary-500/10 border border-primary-500/20 ml-4' 
+                              : 'bg-neutral-800/50 mr-4'
+                          }`}
+                        >
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-xs">
+                            {message.icon}
                           </div>
-                          <div className="text-xs text-neutral-500 mt-1">
-                            {message.timestamp.toLocaleTimeString()}
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-sm ${messageTypes[message.type].color}`}>
+                              {message.content}
+                            </div>
+                            <div className="text-xs text-neutral-500 mt-1">
+                              {message.timestamp.toLocaleTimeString()}
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))
+                        </motion.div>
+                      ))}
+                      
+                      {/* Typing Indicator */}
+                      {isTyping && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-start gap-3 p-3 rounded-lg bg-neutral-800/50 mr-4"
+                        >
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-xs">
+                            🤖
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                              <div className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                              <div className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                            <span className="text-sm text-neutral-400 ml-2">AI is thinking...</span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </>
                   )}
                   <div ref={chatEndRef} />
                 </div>
+              </div>
+            </motion.div>
 
-                {/* Live View Button */}
-                {session && (
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setShowBrowser(!showBrowser)}
-                      className="btn-primary w-full py-3 flex items-center justify-center gap-2"
-                    >
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                      {showBrowser ? 'Hide Live Browser' : 'Show Live Browser'}
-                      {showBrowser ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+            {/* Live Browser View - Full Width Bottom */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+              className="browser-view-container"
+              style={{ 
+                height: isMinimized ? '60px' : `${browserViewHeight}px`,
+                transition: 'height 0.3s ease'
+              }}
+            >
+              <div className="h-full flex flex-col">
+                {/* Mock Browser Toolbar */}
+                <div className="browser-toolbar bg-neutral-900 rounded-t-lg p-3 flex items-center justify-between border-b border-neutral-800">
+                  <div className="flex items-center gap-4">
+                    {/* Traffic Lights */}
+                    <div className="traffic-lights flex items-center gap-2">
+                      <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                      <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                      <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    </div>
                     
+                    {/* URL Bar */}
+                    <div className="url-bar flex-1 max-w-md bg-neutral-800 rounded-md px-3 py-1 text-sm text-neutral-300">
+                      {currentUrl || 'No active session'}
+                    </div>
+                  </div>
+                  
+                  {/* Browser Actions */}
+                  <div className="browser-actions flex items-center gap-2">
+                    {session && (
+                      <>
+                        <button
+                          onClick={refreshIframe}
+                          className="p-2 hover:bg-neutral-800 rounded-md transition-colors"
+                          title="Refresh"
+                        >
+                          <RefreshCw className="w-4 h-4 text-neutral-400" />
+                        </button>
+                        <button
+                          onClick={() => window.open(session.liveViewUrl, '_blank')}
+                          className="p-2 hover:bg-neutral-800 rounded-md transition-colors"
+                          title="Open in new tab"
+                        >
+                          <ExternalLink className="w-4 h-4 text-neutral-400" />
+                        </button>
+                      </>
+                    )}
                     <button
-                      onClick={() => window.open(session.liveViewUrl, '_blank')}
-                      className="btn-ghost w-full py-2 flex items-center justify-center gap-2 text-sm"
+                      onClick={() => setIsMinimized(!isMinimized)}
+                      className="p-2 hover:bg-neutral-800 rounded-md transition-colors"
+                      title={isMinimized ? "Expand" : "Minimize"}
                     >
-                      <ExternalLink className="w-4 h-4" />
-                      Open in New Tab
+                      {isMinimized ? (
+                        <ChevronUp className="w-4 h-4 text-neutral-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-neutral-400" />
+                      )}
                     </button>
+                  </div>
+                </div>
+
+                {/* Browser Content */}
+                {!isMinimized && (
+                  <div className="flex-1 bg-neutral-900 rounded-b-lg overflow-hidden relative">
+                    {!session ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center mb-6">
+                          <Globe className="w-10 h-10 text-neutral-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">No Active Browser Session</h3>
+                        <p className="text-neutral-400 mb-4">
+                          Start a browser session to see the live view here
+                        </p>
+                        <div className="text-sm text-neutral-500">
+                          This area will show a real-time view of the browser once a session begins
+                        </div>
+                      </div>
+                    ) : showBrowser ? (
+                      <>
+                        {/* Loading Skeleton */}
+                        {isIframeLoading && (
+                          <div className="absolute inset-0 bg-neutral-900 flex items-center justify-center">
+                            <div className="browser-loading">
+                              <div className="w-full h-full bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-800 animate-pulse rounded-lg"></div>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="flex items-center gap-3">
+                                  <Loader className="w-6 h-6 animate-spin text-primary-500" />
+                                  <span className="text-neutral-300">Loading browser view...</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Iframe */}
+                        <iframe
+                          ref={iframeRef}
+                          src={session.liveViewUrl}
+                          className="browser-iframe w-full h-full border-0"
+                          title="Live Browser View"
+                          sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                          onLoad={() => setIsIframeLoading(false)}
+                        />
+                        
+                        {/* Session Info Overlay */}
+                        <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 text-xs font-mono">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                            <span className="text-red-400">LIVE</span>
+                          </div>
+                          <div className="text-neutral-400">
+                            Session: {session.sessionId.slice(0, 8)}...
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <div className="w-20 h-20 rounded-full bg-accent-500/20 flex items-center justify-center mb-6">
+                          <Eye className="w-10 h-10 text-accent-500" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">Browser Session Ready</h3>
+                        <p className="text-neutral-400 mb-4">
+                          Your browser session is active and ready to view
+                        </p>
+                        <button
+                          onClick={() => setShowBrowser(true)}
+                          className="btn-primary px-6 py-3 flex items-center gap-2"
+                        >
+                          <Eye className="w-5 h-5" />
+                          Show Live Browser
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </motion.div>
-
-            {/* Live Browser View - Right Column */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-              className="xl:col-span-1"
-            >
-              <div className="glass-panel p-6 h-[600px] flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <Eye className="w-5 h-5 text-accent-500" />
-                    Live Browser View
-                  </h2>
-                  {session && showBrowser && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={refreshIframe}
-                        className="btn-ghost p-2"
-                        title="Refresh"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => window.open(session.liveViewUrl, '_blank')}
-                        className="btn-ghost p-2"
-                        title="Open in new tab"
-                      >
-                        <Maximize2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 flex flex-col">
-                  {!session ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mb-4">
-                        <Globe className="w-8 h-8 text-neutral-600" />
-                      </div>
-                      <p className="text-neutral-400 mb-2">No active session</p>
-                      <p className="text-sm text-neutral-500">
-                        Start a browser session to see the live view
-                      </p>
-                    </div>
-                  ) : showBrowser ? (
-                    <div className="flex-1 bg-neutral-900 rounded-lg overflow-hidden">
-                      <iframe
-                        ref={iframeRef}
-                        src={session.liveViewUrl}
-                        className="w-full h-full border-0"
-                        title="Live Browser View"
-                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <div className="w-16 h-16 rounded-full bg-accent-500/20 flex items-center justify-center mb-4">
-                        <Eye className="w-8 h-8 text-accent-500" />
-                      </div>
-                      <p className="text-neutral-300 mb-2">Live view ready</p>
-                      <p className="text-sm text-neutral-500 mb-4">
-                        Click "Show Live Browser" to view the session
-                      </p>
-                      <div className="glass-card p-3 space-y-1 text-xs font-mono">
-                        <div className="flex justify-between">
-                          <span className="text-neutral-500">Session:</span>
-                          <span className="text-neutral-300">{session.sessionId}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-neutral-500">Window:</span>
-                          <span className="text-neutral-300">{session.windowId}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
           </div>
-
-          {/* Expanded Browser View */}
-          {session && showBrowser && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="mt-6"
-            >
-              <div className="glass-panel p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                    Full Browser View
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={refreshIframe}
-                      className="btn-ghost px-3 py-2 flex items-center gap-2"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Refresh
-                    </button>
-                    <button
-                      onClick={() => window.open(session.liveViewUrl, '_blank')}
-                      className="btn-ghost px-3 py-2 flex items-center gap-2"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      New Tab
-                    </button>
-                    <button
-                      onClick={() => setShowBrowser(false)}
-                      className="btn-ghost px-3 py-2 flex items-center gap-2"
-                    >
-                      <EyeOff className="w-4 h-4" />
-                      Hide
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="bg-neutral-900 rounded-lg overflow-hidden" style={{ height: '70vh' }}>
-                  <iframe
-                    src={session.liveViewUrl}
-                    className="w-full h-full border-0"
-                    title="Full Browser View"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                  />
-                </div>
-                
-                <div className="mt-4 bg-warning-DEFAULT/10 border border-warning-DEFAULT/20 rounded-lg p-4">
-                  <p className="text-sm text-warning-DEFAULT">
-                    <strong>Note:</strong> Browser sessions are temporary and will expire after 30 minutes of inactivity.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
 
           {/* How It Works */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 }}
-            className="mt-12"
+            className="mt-8"
           >
             <div className="glass-panel p-6">
               <h3 className="text-lg font-semibold mb-4">How It Works</h3>
@@ -642,7 +685,7 @@ const BrowserAgentPage = () => {
                   </div>
                   <h4 className="font-medium mb-2">Watch Live</h4>
                   <p className="text-sm text-neutral-400">
-                    View the browser working in real-time with our embedded live view
+                    View the browser working in real-time in the cinematic browser view below
                   </p>
                 </div>
               </div>
@@ -650,6 +693,74 @@ const BrowserAgentPage = () => {
           </motion.div>
         </div>
       </div>
+
+      <style jsx>{`
+        .bento-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 400px auto;
+          gap: 20px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .bento-panel {
+          min-height: 400px;
+        }
+
+        .browser-view-container {
+          grid-column: 1 / -1;
+          background: #1a1a1a;
+          border-radius: 12px;
+          padding: 0;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          overflow: hidden;
+        }
+
+        .browser-iframe {
+          background: #000;
+          border-radius: 0 0 8px 8px;
+        }
+
+        .browser-loading::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+          background-size: 200% 100%;
+          animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .bento-grid {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto;
+          }
+          
+          .browser-view-container {
+            height: 400px !important;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .bento-panel {
+            min-height: 300px;
+          }
+          
+          .browser-view-container {
+            height: 300px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
