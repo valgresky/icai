@@ -1,160 +1,89 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import Stripe from 'https://esm.sh/stripe@12.18.0?target=deno';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import Stripe from 'https://esm.sh/stripe@13.10.0'
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
   apiVersion: '2023-10-16',
-  httpClient: Stripe.createFetchHttpClient(),
-});
+})
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const DOMAIN = Deno.env.get('DOMAIN') || 'http://localhost:3000';
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') as string,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
+)
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Get the authorization header from the request
-    const authHeader = req.headers.get('Authorization');
+    const { price_id, mode = 'payment', success_url, cancel_url } = await req.json()
     
+    // Get user from Clerk token
+    const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'No authorization header provided' }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      throw new Error('No authorization header')
     }
-
-    // Verify the JWT token with Clerk
-    const clerkResponse = await fetch('https://api.clerk.com/v1/sessions/verify', {
-      method: 'POST',
+    
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Verify the Clerk token by making a request to Clerk's API
+    const clerkResponse = await fetch('https://api.clerk.com/v1/me', {
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('CLERK_SECRET_KEY')}`,
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        token: authHeader.replace('Bearer ', ''),
-      }),
-    });
-
+    })
+    
     if (!clerkResponse.ok) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid authentication token' }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      throw new Error('Invalid Clerk token')
+    }
+    
+    const clerkUser = await clerkResponse.json()
+    const userId = clerkUser.id
+    const userEmail = clerkUser.email_addresses[0]?.email_address
+    
+    if (!userId || !userEmail) {
+      throw new Error('Unable to get user information from Clerk')
     }
 
-    const clerkData = await clerkResponse.json();
-    const userId = clerkData.data.user_id;
-
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'User ID not found in token' }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Parse the request body
-    const { 
-      price_id, 
-      mode = 'payment', 
-      success_url, 
-      cancel_url,
-      points_to_redeem = 0 
-    } = await req.json();
-
-    if (!price_id) {
-      return new Response(
-        JSON.stringify({ error: 'Missing price_id parameter' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Check if the user already has a Stripe customer ID
-    const { data: customerData, error: customerError } = await supabase
-      .from('stripe_customers')
-      .select('customer_id')
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .single();
-
-    let customerId;
-
-    if (customerError || !customerData) {
-      // Get user email from Clerk
-      const userResponse = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('CLERK_SECRET_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const userData = await userResponse.json();
-      const userEmail = userData.email_addresses?.[0]?.email_address;
-
-      // Create a new Stripe customer
-      const customer = await stripe.customers.create({
+    // Create or get Stripe customer
+    let customer
+    
+    // First, try to find existing customer by email
+    const existingCustomers = await stripe.customers.list({
+      email: userEmail,
+      limit: 1,
+    })
+    
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0]
+    } else {
+      // Create new customer
+      customer = await stripe.customers.create({
         email: userEmail,
         metadata: {
-          user_id: userId,
+          clerk_user_id: userId,
         },
-      });
+      })
+    }
 
-      customerId = customer.id;
-
-      // Store the customer ID in the database
-      await supabase.from('stripe_customers').insert({
+    // Store customer mapping in Supabase
+    await supabase
+      .from('stripe_customers')
+      .upsert({
         user_id: userId,
-        customer_id: customerId,
-      });
-    } else {
-      customerId = customerData.customer_id;
-    }
+        customer_id: customer.id,
+      })
 
-    // Check if user has enough points if they're trying to redeem
-    let discountAmount = 0;
-    if (points_to_redeem > 0) {
-      const { data: userPoints } = await supabase
-        .from('user_points')
-        .select('available_points')
-        .eq('user_id', userId)
-        .single();
-      
-      if (!userPoints || userPoints.available_points < points_to_redeem) {
-        return new Response(
-          JSON.stringify({ error: 'Insufficient points' }),
-          { 
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-      
-      // Calculate discount (100 points = $1)
-      discountAmount = Math.floor(points_to_redeem / 100) * 100; // in cents
-    }
-
-    // Create checkout session configuration
-    const sessionConfig = {
-      customer: customerId,
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
+      customer: customer.id,
       payment_method_types: ['card'],
       line_items: [
         {
@@ -163,65 +92,28 @@ serve(async (req) => {
         },
       ],
       mode: mode,
-      success_url: success_url || `${DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${DOMAIN}/pricing`,
+      success_url: success_url || `${req.headers.get('origin')}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancel_url || `${req.headers.get('origin')}/pricing`,
       metadata: {
-        user_id: userId,
-        points_redeemed: points_to_redeem.toString(),
+        clerk_user_id: userId,
       },
-    };
-    
-    // Apply discount if points are being redeemed
-    if (discountAmount > 0) {
-      const coupon = await stripe.coupons.create({
-        amount_off: discountAmount,
-        currency: 'usd',
-        duration: 'once',
-        metadata: {
-          user_id: userId,
-          points_redeemed: points_to_redeem.toString(),
-        }
-      });
-      
-      sessionConfig.discounts = [{ coupon: coupon.id }];
-      
-      // Deduct points immediately
-      const { error: deductError } = await supabase.rpc('deduct_points', {
-        user_id: userId,
-        points_to_deduct: points_to_redeem,
-      });
-      
-      if (deductError) {
-        console.error('Error deducting points:', deductError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to deduct points' }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-    }
-
-    // Create the checkout session
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    })
 
     return new Response(
       JSON.stringify({ url: session.url }),
       { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
-    );
+    )
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    
+    console.error('Checkout error:', error)
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: error.message }),
       { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
       }
-    );
+    )
   }
-});
+})

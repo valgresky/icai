@@ -1,251 +1,144 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import Stripe from 'https://esm.sh/stripe@12.18.0?target=deno';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import Stripe from 'https://esm.sh/stripe@13.10.0'
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
   apiVersion: '2023-10-16',
-  httpClient: Stripe.createFetchHttpClient(),
-});
+})
 
-const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') as string,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
+)
 
 serve(async (req) => {
-  const signature = req.headers.get('stripe-signature');
-
-  if (!signature) {
-    return new Response(JSON.stringify({ error: 'Missing Stripe signature' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
+  const signature = req.headers.get('stripe-signature')
+  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+  
   try {
-    const body = await req.text();
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-
-    console.log(`Processing webhook event: ${event.type}`);
-
+    const body = await req.text()
+    const event = stripe.webhooks.constructEvent(body, signature!, webhookSecret!)
+    
+    console.log('Received Stripe webhook:', event.type)
+    
+    // Handle different event types
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        await handleCheckoutComplete(session);
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        await handleInvoicePayment(invoice);
-        break;
-      }
-
+      case 'checkout.session.completed':
+        await handleCheckoutComplete(event.data.object as Stripe.Checkout.Session)
+        break
+        
+      case 'invoice.payment_succeeded':
+        await handleInvoicePayment(event.data.object as Stripe.Invoice)
+        break
+        
       case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        await handleSubscriptionChange(subscription);
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        await handleSubscriptionCanceled(subscription);
-        break;
-      }
+      case 'customer.subscription.updated':
+        await handleSubscriptionChange(event.data.object as Stripe.Subscription)
+        break
+        
+      case 'customer.subscription.deleted':
+        await handleSubscriptionCanceled(event.data.object as Stripe.Subscription)
+        break
     }
-
-    return new Response(JSON.stringify({ received: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Error processing webhook:', error);
     
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ received: true }), { status: 200 })
+  } catch (err) {
+    console.error('Webhook error:', err)
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 400 }
+    )
   }
-});
+})
 
-async function handleCheckoutComplete(session) {
-  // Get the user ID from the metadata
-  const userId = session.metadata?.user_id;
-  if (!userId) {
-    console.error('No user ID found in session metadata');
-    return;
+async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
+  console.log('Processing checkout completion:', session.id)
+  
+  const clerkUserId = session.metadata?.clerk_user_id
+  if (!clerkUserId) {
+    console.error('No clerk_user_id in session metadata')
+    return
   }
-  
-  // Record transaction
-  const { data: transaction, error: transactionError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      stripe_payment_intent_id: session.payment_intent,
-      amount: session.amount_total,
-      currency: session.currency,
-      status: 'completed',
-      description: `Purchase from checkout session ${session.id}`,
-      product_id: session.metadata?.product_id,
-    })
-    .select()
-    .single();
-  
-  if (transactionError) {
-    console.error('Error recording transaction:', transactionError);
-    return;
-  }
-  
-  // Award points (100 points per dollar)
-  const pointsToAward = Math.floor(session.amount_total / 100) * 100;
-  
-  if (pointsToAward > 0) {
-    const { error: pointsError } = await supabase.rpc('award_points', {
-      user_id: userId,
-      points_to_award: pointsToAward,
-      description: `Earned ${pointsToAward} points from purchase`,
-      transaction_id: transaction.id
-    });
-    
-    if (pointsError) {
-      console.error('Error awarding points:', pointsError);
-    }
-  }
-  
-  // If points were redeemed, record that as well
-  const pointsRedeemed = parseInt(session.metadata?.points_redeemed || '0', 10);
-  if (pointsRedeemed > 0) {
-    // Points were already deducted at checkout time, just record the transaction
-    await supabase.from('points_transactions').insert({
-      user_id: userId,
-      points: -pointsRedeemed,
-      type: 'redeemed',
-      description: `Redeemed ${pointsRedeemed} points for discount on order ${session.id}`,
-      transaction_id: transaction.id
-    });
+
+  // Record order for one-time payments
+  if (session.mode === 'payment') {
+    await supabase
+      .from('stripe_orders')
+      .insert({
+        checkout_session_id: session.id,
+        payment_intent_id: session.payment_intent as string,
+        customer_id: session.customer as string,
+        amount_subtotal: session.amount_subtotal!,
+        amount_total: session.amount_total!,
+        currency: session.currency!,
+        payment_status: session.payment_status,
+        status: 'completed',
+      })
   }
 }
 
-async function handleInvoicePayment(invoice) {
-  // Only process paid invoices
-  if (invoice.status !== 'paid') return;
+async function handleInvoicePayment(invoice: Stripe.Invoice) {
+  console.log('Processing invoice payment:', invoice.id)
   
-  // Get the subscription
-  const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
-  
-  // Get the user ID from the metadata
-  const userId = subscription.metadata?.user_id;
-  if (!userId) {
-    console.error('No user ID found in subscription metadata');
-    return;
-  }
-  
-  // Record transaction
-  const { data: transaction, error: transactionError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      stripe_invoice_id: invoice.id,
-      amount: invoice.amount_paid,
-      currency: invoice.currency,
-      status: 'completed',
-      description: `Subscription payment for period ${new Date(invoice.period_start * 1000).toISOString()} to ${new Date(invoice.period_end * 1000).toISOString()}`,
-      product_id: subscription.items.data[0].price.product,
-    })
-    .select()
-    .single();
-  
-  if (transactionError) {
-    console.error('Error recording transaction:', transactionError);
-    return;
-  }
-  
-  // Award points for subscription payment (100 points per dollar)
-  const pointsToAward = Math.floor(invoice.amount_paid / 100) * 100;
-  
-  if (pointsToAward > 0) {
-    const { error: pointsError } = await supabase.rpc('award_points', {
-      user_id: userId,
-      points_to_award: pointsToAward,
-      description: `Earned ${pointsToAward} points from subscription payment`,
-      transaction_id: transaction.id
-    });
+  if (invoice.subscription) {
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
+    const clerkUserId = subscription.metadata?.clerk_user_id
     
-    if (pointsError) {
-      console.error('Error awarding points:', pointsError);
+    if (clerkUserId) {
+      // Update subscription data
+      await handleSubscriptionChange(subscription)
     }
   }
 }
 
-async function handleSubscriptionChange(subscription) {
-  // Get the user ID from the metadata
-  const userId = subscription.metadata?.user_id;
-  if (!userId) {
-    console.error('No user ID found in subscription metadata');
-    return;
-  }
+async function handleSubscriptionChange(subscription: Stripe.Subscription) {
+  console.log('Processing subscription change:', subscription.id)
   
-  // Get payment method details if available
-  let paymentMethodDetails = null;
+  const clerkUserId = subscription.metadata?.clerk_user_id
+  if (!clerkUserId) {
+    console.error('No clerk_user_id in subscription metadata')
+    return
+  }
+
+  // Get payment method details
+  let paymentMethodBrand = null
+  let paymentMethodLast4 = null
+  
   if (subscription.default_payment_method) {
     try {
       const paymentMethod = await stripe.paymentMethods.retrieve(
-        subscription.default_payment_method
-      );
-      
-      if (paymentMethod.type === 'card') {
-        paymentMethodDetails = {
-          brand: paymentMethod.card.brand,
-          last4: paymentMethod.card.last4
-        };
-      }
+        subscription.default_payment_method as string
+      )
+      paymentMethodBrand = paymentMethod.card?.brand
+      paymentMethodLast4 = paymentMethod.card?.last4
     } catch (error) {
-      console.error('Error retrieving payment method:', error);
+      console.error('Error fetching payment method:', error)
     }
   }
-  
-  // Update subscription in database
-  const { error } = await supabase
-    .from('subscriptions')
+
+  await supabase
+    .from('stripe_subscriptions')
     .upsert({
-      user_id: userId,
-      stripe_subscription_id: subscription.id,
-      stripe_customer_id: subscription.customer,
-      stripe_price_id: subscription.items.data[0].price.id,
+      customer_id: subscription.customer as string,
+      subscription_id: subscription.id,
+      price_id: subscription.items.data[0]?.price.id,
       status: subscription.status,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-      cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
-      canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
-      updated_at: new Date().toISOString(),
-    });
-  
-  if (error) {
-    console.error('Error updating subscription:', error);
-  }
+      current_period_start: subscription.current_period_start,
+      current_period_end: subscription.current_period_end,
+      cancel_at_period_end: subscription.cancel_at_period_end,
+      payment_method_brand: paymentMethodBrand,
+      payment_method_last4: paymentMethodLast4,
+    })
 }
 
-async function handleSubscriptionCanceled(subscription) {
-  // Get the user ID from the metadata
-  const userId = subscription.metadata?.user_id;
-  if (!userId) {
-    console.error('No user ID found in subscription metadata');
-    return;
-  }
+async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
+  console.log('Processing subscription cancellation:', subscription.id)
   
-  // Update subscription status in database
-  const { error } = await supabase
-    .from('subscriptions')
+  await supabase
+    .from('stripe_subscriptions')
     .update({
       status: 'canceled',
-      canceled_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      deleted_at: new Date().toISOString(),
     })
-    .eq('stripe_subscription_id', subscription.id);
-  
-  if (error) {
-    console.error('Error updating subscription status:', error);
-  }
+    .eq('subscription_id', subscription.id)
 }
