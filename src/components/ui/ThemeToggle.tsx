@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Moon, Sun, Sparkles } from 'lucide-react';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../providers/ThemeProvider';
 
 interface ThemeToggleProps {
   className?: string;
 }
 
 const ThemeToggle = ({ className = '' }: ThemeToggleProps) => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const themes = [
@@ -24,7 +24,7 @@ const ThemeToggle = ({ className = '' }: ThemeToggleProps) => {
     <div className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-full hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 glass:hover:bg-white/10"
+        className="p-2 rounded-full hover:bg-neutral-800"
         aria-label="Toggle theme"
       >
         <Icon className="w-5 h-5" />
@@ -58,13 +58,13 @@ const ThemeToggle = ({ className = '' }: ThemeToggleProps) => {
                   <button
                     key={item.value}
                     onClick={() => {
+                      setTheme(item.value);
                       setIsOpen(false);
-                      toggleTheme();
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-left ${
                       isActive 
                         ? 'bg-primary-500 text-white' 
-                        : 'hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 glass:hover:bg-white/10'
+                        : 'hover:bg-neutral-800'
                     }`}
                   >
                     <ItemIcon className="w-4 h-4" />
