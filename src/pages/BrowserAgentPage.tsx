@@ -523,7 +523,7 @@ const BrowserAgentPage = () => {
                     
                     {/* URL Bar */}
                     <div className="url-bar flex-1 max-w-md bg-neutral-800 rounded-md px-3 py-1 text-sm text-neutral-300">
-                      {currentUrl || ''}
+                      {currentUrl || 'No active session'}
                     </div>
                   </div>
                   
@@ -765,6 +765,16 @@ const BrowserAgentPage = () => {
 
         .status-dot.active {
           animation: pulse 2s infinite;
+        }
+
+        .start-session-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .start-session-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         @keyframes shimmer {
