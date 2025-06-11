@@ -5,6 +5,7 @@ import { Star, Copy, Check, Wrench, ShoppingCart, Loader } from 'lucide-react';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import { formatCurrency } from '../../utils/helpers';
 import WorkflowModal from './WorkflowModal';
+import { useCart } from '../../contexts/CartContext';
 
 interface WorkflowCardProps {
   id: string;
@@ -43,8 +44,10 @@ const WorkflowCard = ({
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { dispatch } = useCart();
   const isFree = price === 0 || price === null;
 
   const handleCopy = async () => {
@@ -59,57 +62,27 @@ const WorkflowCard = ({
     }
   };
 
-  const handlePurchase = async () => {
-    if (!stripeProductId) {
-      alert('This workflow is not available for purchase yet.');
-      return;
-    }
-
-    if (!user) {
-      // Trigger Clerk sign-in modal
-      const signInButton = document.querySelector('[data-clerk-sign-in]') as HTMLButtonElement;
-      signInButton?.click();
-      return;
-    }
-
-    setPurchaseLoading(true);
+  const handleAddToCart = () => {
+    if (!stripeProductId || isFree) return;
     
     try {
-      // Get Clerk session token
-      const token = await getToken();
-      
-      if (!token) {
-        throw new Error('Unable to authenticate. Please try signing in again.');
-      }
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          price_id: stripeProductId,
-          mode: 'payment',
-          success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/workflow/${id}`,
-        }),
+      dispatch({
+        type: 'ADD_ITEM',
+        payload: {
+          id,
+          title,
+          price: price!,
+          quantity: 1,
+          priceId: stripeProductId,
+          type: 'workflow',
+          image
+        }
       });
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      alert('Failed to start checkout. Please try again.');
-    } finally {
-      setPurchaseLoading(false);
+      console.error('Error adding to cart:', error);
     }
   };
 
@@ -175,12 +148,14 @@ const WorkflowCard = ({
                     className="btn p-2 rounded-full btn-primary group/purchase relative"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={handlePurchase}
-                    disabled={purchaseLoading}
-                    title="Purchase Workflow"
+                    onClick={handleAddToCart}
+                    disabled={purchaseLoading || addedToCart}
+                    title="Add to Cart"
                   >
                     {purchaseLoading ? (
                       <Loader className="w-4 h-4 animate-spin" />
+                    ) : addedToCart ? (
+                      <Check className="w-4 h-4" />
                     ) : (
                       <ShoppingCart className="w-4 h-4" />
                     )}

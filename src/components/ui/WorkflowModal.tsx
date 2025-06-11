@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Star, Download, Tag, User, Calendar, ShoppingCart, Loader } from 'lucide-react';
+import { X, Star, Download, Tag, User, Calendar, ShoppingCart, Loader, Check } from 'lucide-react';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import { formatDate, formatCurrency } from '../../utils/helpers';
+import { useCart } from '../../contexts/CartContext';
 
 interface WorkflowModalProps {
   workflow: {
@@ -27,9 +28,10 @@ interface WorkflowModalProps {
 }
 
 const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
-  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { dispatch } = useCart();
 
   // Close on escape key
   useEffect(() => {
@@ -52,57 +54,27 @@ const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
     };
   }, [isOpen]);
 
-  const handlePurchase = async () => {
-    if (!workflow.stripeProductId) {
-      alert('This workflow is not available for purchase yet.');
-      return;
-    }
-
-    if (!user) {
-      // Trigger Clerk sign-in modal
-      const signInButton = document.querySelector('[data-clerk-sign-in]') as HTMLButtonElement;
-      signInButton?.click();
-      return;
-    }
-
-    setPurchaseLoading(true);
+  const handleAddToCart = () => {
+    if (!workflow.stripeProductId || workflow.price === null) return;
     
     try {
-      // Get Clerk session token using the useAuth hook
-      const token = await getToken();
-      
-      if (!token) {
-        throw new Error('Unable to authenticate. Please try signing in again.');
-      }
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          price_id: workflow.stripeProductId,
-          mode: 'payment',
-          success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/workflow/${workflow.id}`,
-        }),
+      dispatch({
+        type: 'ADD_ITEM',
+        payload: {
+          id: workflow.id,
+          title: workflow.title,
+          price: workflow.price,
+          quantity: 1,
+          priceId: workflow.stripeProductId,
+          type: 'workflow',
+          image: workflow.image
+        }
       });
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      alert('Failed to start checkout. Please try again.');
-    } finally {
-      setPurchaseLoading(false);
+      console.error('Error adding to cart:', error);
     }
   };
 
@@ -165,16 +137,19 @@ const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
                       )}
                       {workflow.stripeProductId && workflow.price !== null && (
                         <button
-                          onClick={handlePurchase}
-                          disabled={purchaseLoading}
+                          onClick={handleAddToCart}
+                          disabled={addedToCart}
                           className="btn-primary mt-2 flex items-center gap-2"
                         >
-                          {purchaseLoading ? (
-                            <Loader className="w-4 h-4 animate-spin" />
+                          {addedToCart ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Added to Cart
+                            </>
                           ) : (
                             <>
                               <ShoppingCart className="w-4 h-4" />
-                              Purchase Now
+                              Add to Cart
                             </>
                           )}
                         </button>

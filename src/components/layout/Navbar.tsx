@@ -211,7 +211,10 @@ const Navbar = () => {
               ))}
               
               <button 
-                onClick={() => setIsCartOpen(true)}
+                onClick={() => {
+                  setIsCartOpen(true);
+                  setIsOpen(false);
+                }}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 <ShoppingCart className="w-5 h-5" />

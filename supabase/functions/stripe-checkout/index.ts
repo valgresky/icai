@@ -23,7 +23,15 @@ serve(async (req) => {
   }
 
   try {
-    const { price_id, mode = 'payment', success_url, cancel_url } = await req.json()
+    // Parse request body
+    const { 
+      price_id, 
+      items = [], 
+      mode = 'payment', 
+      success_url, 
+      cancel_url, 
+      points_to_redeem = 0 
+    } = await req.json()
     
     // Get user from Clerk token
     const authHeader = req.headers.get('Authorization')
@@ -81,23 +89,75 @@ serve(async (req) => {
         customer_id: customer.id,
       })
 
+    // Check if user has enough points if points_to_redeem > 0
+    let discountAmount = 0
+    if (points_to_redeem > 0) {
+      const { data: userPoints } = await supabase
+        .from('user_points')
+        .select('available_points')
+        .eq('user_id', userId)
+        .single()
+      
+      if (!userPoints || userPoints.available_points < points_to_redeem) {
+        throw new Error('Insufficient points')
+      }
+      
+      // Calculate discount (100 points = $1)
+      discountAmount = Math.floor(points_to_redeem / 100) * 100 // in cents
+    }
+
     // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig: any = {
       customer: customer.id,
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: price_id,
-          quantity: 1,
-        },
-      ],
       mode: mode,
       success_url: success_url || `${req.headers.get('origin')}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancel_url || `${req.headers.get('origin')}/pricing`,
       metadata: {
         clerk_user_id: userId,
+        points_redeemed: points_to_redeem.toString(),
       },
-    })
+    }
+
+    // Handle line items - either from a single price_id or from items array
+    if (price_id) {
+      sessionConfig.line_items = [
+        {
+          price: price_id,
+          quantity: 1,
+        },
+      ]
+    } else if (items && items.length > 0) {
+      sessionConfig.line_items = items.map((item: any) => ({
+        price: item.price_id,
+        quantity: item.quantity || 1,
+      }))
+    } else {
+      throw new Error('No items specified for checkout')
+    }
+    
+    // Apply discount if points are being redeemed
+    if (discountAmount > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: discountAmount,
+        currency: 'usd',
+        duration: 'once',
+        metadata: {
+          userId,
+          points_redeemed: points_to_redeem.toString(),
+        }
+      })
+      
+      sessionConfig.discounts = [{ coupon: coupon.id }]
+      
+      // Deduct points immediately
+      await supabase.rpc('deduct_points', {
+        user_id: userId,
+        points_to_deduct: points_to_redeem,
+      })
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig)
 
     return new Response(
       JSON.stringify({ url: session.url }),

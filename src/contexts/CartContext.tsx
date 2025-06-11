@@ -1,11 +1,14 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
 import { workflows } from '../data/mockData';
 
-interface CartItem {
+export interface CartItem {
   id: string;
   title: string;
   price: number;
   quantity: number;
+  priceId?: string;
+  type?: 'workflow' | 'product';
+  image?: string;
 }
 
 interface CartState {
@@ -14,7 +17,7 @@ interface CartState {
 }
 
 type CartAction = 
-  | { type: 'ADD_ITEM'; payload: string }
+  | { type: 'ADD_ITEM'; payload: CartItem }
   | { type: 'REMOVE_ITEM'; payload: string }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'CLEAR_CART' };
@@ -27,31 +30,24 @@ const CartContext = createContext<{
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_ITEM': {
-      const workflow = workflows.find(w => w.id === action.payload);
-      if (!workflow || workflow.price === null) return state;
+      const existingItem = state.items.find(item => item.id === action.payload.id);
       
-      const existingItem = state.items.find(item => item.id === action.payload);
       if (existingItem) {
         return {
           ...state,
           items: state.items.map(item =>
-            item.id === action.payload
+            item.id === action.payload.id
               ? { ...item, quantity: item.quantity + 1 }
               : item
           ),
-          total: state.total + workflow.price
+          total: state.total + action.payload.price
         };
       }
       
       return {
         ...state,
-        items: [...state.items, { 
-          id: workflow.id,
-          title: workflow.title,
-          price: workflow.price,
-          quantity: 1
-        }],
-        total: state.total + workflow.price
+        items: [...state.items, action.payload],
+        total: state.total + (action.payload.price * action.payload.quantity)
       };
     }
     
@@ -71,6 +67,14 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       if (!item) return state;
       
       const quantityDiff = action.payload.quantity - item.quantity;
+      
+      if (action.payload.quantity <= 0) {
+        return {
+          ...state,
+          items: state.items.filter(i => i.id !== action.payload.id),
+          total: state.total - (item.price * item.quantity)
+        };
+      }
       
       return {
         ...state,
