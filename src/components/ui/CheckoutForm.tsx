@@ -73,8 +73,10 @@ const CheckoutForm = ({
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          price_id: priceId,
-          mode,
+          items: [{
+            price_id: priceId,
+            quantity: 1
+          }],
           points_to_redeem: pointsToRedeem,
           success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/pricing`,

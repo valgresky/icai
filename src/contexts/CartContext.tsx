@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, ReactNode } from 'react';
+import { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { workflows } from '../data/mockData';
 
 export interface CartItem {
@@ -27,7 +27,31 @@ const CartContext = createContext<{
   dispatch: React.Dispatch<CartAction>;
 } | null>(null);
 
+// Load cart from localStorage
+const loadCartFromStorage = (): CartState => {
+  try {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      return JSON.parse(savedCart);
+    }
+  } catch (error) {
+    console.error('Failed to load cart from localStorage:', error);
+  }
+  return { items: [], total: 0 };
+};
+
+// Save cart to localStorage
+const saveCartToStorage = (cart: CartState) => {
+  try {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  } catch (error) {
+    console.error('Failed to save cart to localStorage:', error);
+  }
+};
+
 const cartReducer = (state: CartState, action: CartAction): CartState => {
+  let newState: CartState;
+  
   switch (action.type) {
     case 'ADD_ITEM': {
       // Handle both string ID (for backward compatibility) and CartItem object
@@ -38,7 +62,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         const existingItem = state.items.find(item => item.id === action.payload);
         
         if (existingItem) {
-          return {
+          newState = {
             ...state,
             items: state.items.map(item =>
               item.id === action.payload
@@ -47,55 +71,60 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
             ),
             total: state.total + workflow.price
           };
+        } else {
+          newState = {
+            ...state,
+            items: [...state.items, { 
+              id: workflow.id,
+              title: workflow.title,
+              price: workflow.price,
+              quantity: 1,
+              type: 'workflow',
+              image: workflow.image,
+              priceId: workflow.stripeProductId
+            }],
+            total: state.total + workflow.price
+          };
         }
-        
-        return {
-          ...state,
-          items: [...state.items, { 
-            id: workflow.id,
-            title: workflow.title,
-            price: workflow.price,
-            quantity: 1,
-            type: 'workflow',
-            image: workflow.image,
-            priceId: workflow.stripeProductId
-          }],
-          total: state.total + workflow.price
-        };
       } else {
         // Handle CartItem object
         const item = action.payload;
-        const existingItem = state.items.find(i => i.id === item.id);
+        const existingItem = state.items.find(i => 
+          (i.id === item.id) || 
+          (i.priceId && i.priceId === item.priceId)
+        );
         
         if (existingItem) {
-          return {
+          newState = {
             ...state,
             items: state.items.map(i =>
-              i.id === item.id
+              (i.id === item.id) || (i.priceId && i.priceId === item.priceId)
                 ? { ...i, quantity: i.quantity + 1 }
                 : i
             ),
             total: state.total + item.price
           };
+        } else {
+          newState = {
+            ...state,
+            items: [...state.items, { ...item, quantity: item.quantity || 1 }],
+            total: state.total + (item.price * (item.quantity || 1))
+          };
         }
-        
-        return {
-          ...state,
-          items: [...state.items, { ...item, quantity: item.quantity || 1 }],
-          total: state.total + (item.price * (item.quantity || 1))
-        };
       }
+      break;
     }
     
     case 'REMOVE_ITEM': {
       const item = state.items.find(i => i.id === action.payload);
       if (!item) return state;
       
-      return {
+      newState = {
         ...state,
         items: state.items.filter(i => i.id !== action.payload),
         total: state.total - (item.price * item.quantity)
       };
+      break;
     }
     
     case 'UPDATE_QUANTITY': {
@@ -105,40 +134,43 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       const quantityDiff = action.payload.quantity - item.quantity;
       
       if (action.payload.quantity <= 0) {
-        return {
+        newState = {
           ...state,
           items: state.items.filter(i => i.id !== action.payload.id),
           total: state.total - (item.price * item.quantity)
         };
+      } else {
+        newState = {
+          ...state,
+          items: state.items.map(item =>
+            item.id === action.payload.id
+              ? { ...item, quantity: action.payload.quantity }
+              : item
+          ),
+          total: state.total + (item.price * quantityDiff)
+        };
       }
-      
-      return {
-        ...state,
-        items: state.items.map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: action.payload.quantity }
-            : item
-        ),
-        total: state.total + (item.price * quantityDiff)
-      };
+      break;
     }
     
     case 'CLEAR_CART':
-      return {
+      newState = {
         items: [],
         total: 0
       };
+      break;
       
     default:
       return state;
   }
+  
+  // Save to localStorage after each update
+  saveCartToStorage(newState);
+  return newState;
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(cartReducer, {
-    items: [],
-    total: 0
-  });
+  const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 }, loadCartFromStorage);
 
   return (
     <CartContext.Provider value={{ state, dispatch }}>
