@@ -36,6 +36,10 @@ const BrowserAgentPage = () => {
       instructions: 'Search for laptops under $500 and find the top 3 results'
     },
     {
+      url: 'https://hypebeast.com',
+      instructions: 'Browse the latest streetwear drops and find trending sneaker releases'
+    },
+    {
       url: 'https://www.amazon.com',
       instructions: 'Find product reviews for wireless headphones'
     },
