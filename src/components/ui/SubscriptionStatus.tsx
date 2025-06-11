@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crown, Calendar, CreditCard } from 'lucide-react';
+import { Crown, Calendar, CreditCard, AlertCircle } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 
 interface SubscriptionData {
@@ -11,9 +11,17 @@ interface SubscriptionData {
   payment_method_last4: string | null;
 }
 
+// Map price IDs to plan names
+const planNames: Record<string, string> = {
+  'price_1RYXIaQqrelvc6fFsWaE3YTV': 'Workflow Club Monthly',
+  'price_1RYXJ9Qqrelvc6fF5KWqwhKj': 'Workflow Club Yearly',
+  'price_1RYXLEQqrelvc6fFzVCHcPgt': 'Custom Development',
+};
+
 const SubscriptionStatus = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useUser();
 
   useEffect(() => {
@@ -28,6 +36,11 @@ const SubscriptionStatus = () => {
     try {
       const token = await user.getToken();
       
+      if (!token) {
+        setError('Unable to authenticate');
+        return;
+      }
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/stripe_user_subscriptions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -39,9 +52,13 @@ const SubscriptionStatus = () => {
       if (response.ok) {
         const data = await response.json();
         setSubscription(data[0] || null);
+      } else {
+        console.error('Failed to fetch subscription:', response.status);
+        setError('Failed to load subscription data');
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
+      setError('Error loading subscription');
     } finally {
       setLoading(false);
     }
@@ -52,6 +69,17 @@ const SubscriptionStatus = () => {
       <div className="glass-panel p-4 animate-pulse">
         <div className="h-4 bg-neutral-700 rounded w-1/2 mb-2"></div>
         <div className="h-3 bg-neutral-700 rounded w-1/3"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="glass-panel p-4">
+        <div className="flex items-center gap-2 text-error-DEFAULT">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-sm">Unable to load subscription</span>
+        </div>
       </div>
     );
   }
@@ -68,6 +96,7 @@ const SubscriptionStatus = () => {
   }
 
   const isActive = ['active', 'trialing'].includes(subscription.subscription_status);
+  const planName = subscription.price_id ? planNames[subscription.price_id] || 'Premium Plan' : 'Unknown Plan';
   
   return (
     <div className="glass-panel p-4">
@@ -76,10 +105,12 @@ const SubscriptionStatus = () => {
           <Crown className={`w-4 h-4 ${isActive ? 'text-primary-400' : 'text-neutral-400'}`} />
           <div>
             <div className="font-medium text-sm">
-              Subscription
+              {planName}
             </div>
             <div className={`text-xs capitalize ${
-              isActive ? 'text-success-DEFAULT' : 'text-warning-DEFAULT'
+              isActive ? 'text-success-DEFAULT' : 
+              subscription.subscription_status === 'canceled' ? 'text-error-DEFAULT' :
+              'text-warning-DEFAULT'
             }`}>
               {subscription.subscription_status.replace('_', ' ')}
             </div>

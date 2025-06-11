@@ -177,7 +177,7 @@ export const products: Product[] = [
     priceId: 'price_1RYXLEQqrelvc6fFzVCHcPgt',
     name: 'Custom Workflow Development',
     description: 'Get a workflow built specifically for your unique requirements. Includes requirements gathering session, custom workflow design and architecture, full implementation and testing, comprehensive documentation, and 30 days of post-delivery support.',
-    mode: 'payment'
+    mode: 'subscription'
   },
   {
     priceId: 'price_1RYXJtQqrelvc6fFVYVxxLqo',

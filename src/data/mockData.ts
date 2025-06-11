@@ -15,7 +15,7 @@ export interface Workflow {
   tags: string[];
   featured: boolean;
   code?: string;
-  stripeProductId?: string; // Add Stripe product mapping
+  stripeProductId?: string;
 }
 
 export interface Category {
@@ -395,225 +395,6 @@ export const workflows = [
     tags: ["human-in-loop", "approval", "telegram", "oversight"],
     featured: false,
     stripeProductId: "price_1RYXCtQqrelvc6fFwFop8COe"
-  },
-  // Bundle Products
-  {
-    id: "ai-starter-pack",
-    title: "AI Agent Starter Pack",
-    description: "Build intelligent chatbots with document understanding using our RAG Pipeline & Chatbot workflow. Create your first autonomous AI assistant with email, calendar, and contacts integration. Set up automated email classification and response systems for customer support. Generate AI-powered social media content for LinkedIn. Automate document processing and data extraction for invoices and more.",
-    image: "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg",
-    price: 50,
-    rating: 4.9,
-    downloads: 456,
-    category: "Bundle",
-    author: {
-      name: "AI Education Team",
-      avatar: "https://randomuser.me/api/portraits/men/29.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["bundle", "AI", "starter", "beginner"],
-    featured: true,
-    stripeProductId: "price_1RYWzgQqrelvc6fFVONGQjBy"
-  },
-  {
-    id: "api-integration-templates",
-    title: "API Integration Templates",
-    description: "Connect to OpenWeather, Perplexity, and Tavily with our API Calls in n8n template. Automate web research with Perplexity Research workflows. Extract data from websites using Firecrawl Extract templates. Leverage advanced web automation with Apify actors integration. Create AI-generated images for marketing with OpenAI Image Generation workflows.",
-    image: "https://images.pexels.com/photos/11035471/pexels-photo-11035471.jpeg",
-    price: 30,
-    rating: 4.8,
-    downloads: 234,
-    category: "Bundle",
-    author: {
-      name: "Integration Team",
-      avatar: "https://randomuser.me/api/portraits/men/30.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["bundle", "api", "integration", "templates"],
-    featured: false,
-    stripeProductId: "price_1RYX7IQqrelvc6fFrmdbl55h"
-  },
-  {
-    id: "marketing-content-suite",
-    title: "Marketing & Content Suite",
-    description: "Generate automated product photography and videos with our Product Videos workflow. Create AI-powered LinkedIn posts with integrated image generation. Build blog posts with web research using our Content Creator Agent. Distribute content across multiple platforms with Social Media Automation templates.",
-    image: "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg",
-    price: 80,
-    rating: 4.9,
-    downloads: 345,
-    category: "Bundle",
-    author: {
-      name: "Marketing Team",
-      avatar: "https://randomuser.me/api/portraits/women/31.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["bundle", "marketing", "content", "social-media"],
-    featured: true,
-    stripeProductId: "price_1RYX7lQqrelvc6fFiwaGIrjP"
-  },
-  {
-    id: "advanced-ai-architectures",
-    title: "Advanced AI Architectures",
-    description: "Master complex workflows with specialized AI agents working together in our Multi-Agent Orchestrator. Implement advanced document retrieval with RAG Workflow vs RAG Agent comparisons. Analyze stock markets with chart generation using our Technical Analyst Agent. Build sequential AI processing for complex tasks with Prompt Chaining. Create intelligent request routing to specialized agents and implement concurrent AI processing for faster results with Parallelization patterns.",
-    image: "https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg",
-    price: 100,
-    rating: 4.8,
-    downloads: 267,
-    category: "Bundle",
-    author: {
-      name: "AI Architecture Team",
-      avatar: "https://randomuser.me/api/portraits/men/32.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["bundle", "advanced", "AI", "architecture"],
-    featured: false,
-    stripeProductId: "price_1RYX6oQqrelvc6fFoiPWHD6c"
-  },
-  {
-    id: "complete-bundle",
-    title: "Complete Bundle",
-    description: "Get 20 advanced workflow templates with complete setup documentation for each workflow. Includes API credential guides, best practices documentation, and email support for 30 days. Save over $100 compared to buying individually.",
-    image: "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg",
-    price: 350,
-    rating: 4.9,
-    downloads: 567,
-    category: "Bundle",
-    author: {
-      name: "Complete Solutions Team",
-      avatar: "https://randomuser.me/api/portraits/men/33.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["bundle", "complete", "all-workflows", "premium"],
-    featured: true,
-    stripeProductId: "price_1RYX8tQqrelvc6fF10usHmt1"
-  },
-  // Service Products
-  {
-    id: "api-credits-package",
-    title: "API Credits Package",
-    description: "Jumpstart your workflows with $30 worth of API credits including $10 for OpenRouter, $10 for Tavily, and $10 for Perplexity. Also includes detailed setup guides for all APIs and best practices for credit management to maximize your usage.",
-    image: "https://images.pexels.com/photos/5428836/pexels-photo-5428836.jpeg",
-    price: 50,
-    rating: 4.7,
-    downloads: 234,
-    category: "Service",
-    author: {
-      name: "API Support Team",
-      avatar: "https://randomuser.me/api/portraits/women/34.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["api", "credits", "setup", "support"],
-    featured: false,
-    stripeProductId: "price_1RYXLZQqrelvc6fFfuApb26b"
-  },
-  {
-    id: "workflow-installation",
-    title: "Workflow Installation",
-    description: "Complete hands-on setup of any workflow in your n8n instance. Includes API credential configuration, thorough testing and troubleshooting, and a 30-minute training call to ensure you understand how to use and modify the workflow.",
-    image: "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg",
-    price: 50,
-    rating: 4.8,
-    downloads: 189,
-    category: "Service",
-    author: {
-      name: "Installation Team",
-      avatar: "https://randomuser.me/api/portraits/men/35.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["installation", "setup", "training", "support"],
-    featured: false,
-    stripeProductId: "price_1RYXKZQqrelvc6fFdhcLmm3M"
-  },
-  {
-    id: "custom-workflow-development",
-    title: "Custom Workflow Development",
-    description: "Get a workflow built specifically for your unique requirements. Includes requirements gathering session, custom workflow design and architecture, full implementation and testing, comprehensive documentation, and 30 days of post-delivery support.",
-    image: "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg",
-    price: 500,
-    rating: 4.9,
-    downloads: 89,
-    category: "Service",
-    author: {
-      name: "Custom Development Team",
-      avatar: "https://randomuser.me/api/portraits/women/36.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["custom", "development", "bespoke", "premium"],
-    featured: false,
-    stripeProductId: "price_1RYXLEQqrelvc6fFzVCHcPgt"
-  },
-  {
-    id: "enterprise-support",
-    title: "Enterprise Support",
-    description: "Get all workflows with full source code access and rights to modify. Includes custom workflow development with 2 new workflows created specifically for your needs each month. White-label options available for agencies. Priority email and video support with guaranteed 24-hour response time. Monthly team training sessions included with 2 hours of hands-on instruction.",
-    image: "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg",
-    price: 500,
-    rating: 4.9,
-    downloads: 45,
-    category: "Service",
-    author: {
-      name: "Enterprise Team",
-      avatar: "https://randomuser.me/api/portraits/men/37.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["enterprise", "support", "premium", "white-label"],
-    featured: false,
-    stripeProductId: "price_1RYXJtQqrelvc6fFVYVxxLqo"
-  },
-  {
-    id: "enterprise-workflows",
-    title: "Enterprise Workflows",
-    description: "Implement vector storage with persistent memory using Supabase/Postgres Integration. Create approval workflows with Telegram integration through Human-in-the-Loop patterns. Build complete email management systems with Gmail integration. Automate invoice processing and financial workflows for your billing department.",
-    image: "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg",
-    price: 1500,
-    rating: 4.9,
-    downloads: 23,
-    category: "Service",
-    author: {
-      name: "Enterprise Solutions Team",
-      avatar: "https://randomuser.me/api/portraits/women/38.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["enterprise", "workflows", "premium", "complete"],
-    featured: false,
-    stripeProductId: "price_1RYX8BQqrelvc6fFpmfVFUF0"
-  },
-  // Subscription Products
-  {
-    id: "workflow-club-monthly",
-    title: "Workflow Club Membership",
-    description: "Access all current workflows with new templates added monthly. Includes priority support, community access, and instant notifications when new workflows are released. Annual members save over 12% compared to monthly billing.",
-    image: "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg",
-    price: 20,
-    rating: 4.8,
-    downloads: 789,
-    category: "Subscription",
-    author: {
-      name: "Community Team",
-      avatar: "https://randomuser.me/api/portraits/men/39.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["subscription", "monthly", "community", "access"],
-    featured: true,
-    stripeProductId: "price_1RYXIaQqrelvc6fFsWaE3YTV"
-  },
-  {
-    id: "workflow-club-yearly",
-    title: "Workflow Club Membership (Yearly)",
-    description: "Access all current workflows with new templates added monthly. Includes priority support, community access, and instant notifications when new workflows are released. Annual members save over 12% compared to monthly billing.",
-    image: "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg",
-    price: 200,
-    rating: 4.9,
-    downloads: 456,
-    category: "Subscription",
-    author: {
-      name: "Community Team",
-      avatar: "https://randomuser.me/api/portraits/women/40.jpg"
-    },
-    createdAt: "2024-04-02",
-    tags: ["subscription", "yearly", "community", "savings"],
-    featured: true,
-    stripeProductId: "price_1RYXJ9Qqrelvc6fF5KWqwhKj"
   }
 ];
 
@@ -652,27 +433,6 @@ export const categories: Category[] = [
     description: "Streamline your marketing campaigns and analytics",
     icon: "Megaphone",
     count: workflows.filter(w => w.category === "Marketing").length
-  },
-  {
-    id: "bundle",
-    name: "Bundles",
-    description: "Curated collections of workflows at discounted prices",
-    icon: "Package",
-    count: workflows.filter(w => w.category === "Bundle").length
-  },
-  {
-    id: "service",
-    name: "Services",
-    description: "Professional services and custom development",
-    icon: "Users",
-    count: workflows.filter(w => w.category === "Service").length
-  },
-  {
-    id: "subscription",
-    name: "Subscriptions",
-    description: "Ongoing access to workflows and community",
-    icon: "Calendar",
-    count: workflows.filter(w => w.category === "Subscription").length
   }
 ];
 
@@ -713,10 +473,7 @@ export const filterOptions = [
       { id: 'support', label: 'Support' },
       { id: 'integration', label: 'Integration' },
       { id: 'finance', label: 'Finance' },
-      { id: 'marketing', label: 'Marketing' },
-      { id: 'bundle', label: 'Bundles' },
-      { id: 'service', label: 'Services' },
-      { id: 'subscription', label: 'Subscriptions' }
+      { id: 'marketing', label: 'Marketing' }
     ]
   },
   {
