@@ -108,5 +108,11 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addVariant }) {
+      addVariant('light', '.light &');
+      addVariant('dark', '.dark &');
+      addVariant('glass', '.glass &');
+    }
+  ],
 };
