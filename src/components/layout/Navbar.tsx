@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Workflow, Search, ShoppingCart, User, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SignInButton, SignUpButton, UserButton, useUser, SignedIn, SignedOut } from '@clerk/clerk-react';
+import { SignInButton, SignUpButton, UserButton, useUser, SignedIn, SignedOut, useClerk } from '@clerk/clerk-react';
 import { cn } from '../../utils/helpers';
 import { useTheme } from '../../hooks/useTheme';
 import { useCart } from '../../contexts/CartContext';
@@ -15,8 +15,9 @@ const Navbar = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { state } = useCart();
+  const clerk = useClerk();
 
   const links = [
     { href: '/', label: 'Home' },
@@ -38,6 +39,16 @@ const Navbar = () => {
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
+
+  // Debug logging for Clerk state
+  useEffect(() => {
+    console.log('Clerk Debug Info:', {
+      isLoaded,
+      user: user ? { id: user.id, email: user.primaryEmailAddress?.emailAddress } : null,
+      clerkLoaded: !!clerk,
+      publishableKey: import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ? 'Set' : 'Missing'
+    });
+  }, [isLoaded, user, clerk]);
 
   return (
     <header 
@@ -97,34 +108,53 @@ const Navbar = () => {
             )}
           </button>
           
-          <SignedIn>
-            <SubscriptionStatus />
-            <UserButton 
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8"
-                }
-              }}
-              afterSignOutUrl="/"
-            />
-          </SignedIn>
-          
-          <SignedOut>
-            <div className="flex items-center gap-2">
-              <SignInButton mode="modal" fallbackRedirectUrl="/" signUpFallbackRedirectUrl="/">
-                <button className="btn btn-ghost flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Sign In
-                </button>
-              </SignInButton>
-              <SignUpButton mode="modal" fallbackRedirectUrl="/" signInFallbackRedirectUrl="/">
-                <button className="btn btn-primary flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Sign Up
-                </button>
-              </SignUpButton>
-            </div>
-          </SignedOut>
+          {/* Clerk Authentication */}
+          {!isLoaded ? (
+            <div className="w-8 h-8 bg-neutral-800 rounded-full animate-pulse" />
+          ) : (
+            <>
+              <SignedIn>
+                <SubscriptionStatus />
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-8 h-8",
+                      userButtonPopoverCard: "bg-background-secondary border border-neutral-700",
+                      userButtonPopoverActionButton: "text-neutral-300 hover:bg-neutral-800",
+                      userButtonPopoverActionButtonText: "text-neutral-300",
+                      userButtonPopoverFooter: "hidden"
+                    }
+                  }}
+                  afterSignOutUrl="/"
+                />
+              </SignedIn>
+              
+              <SignedOut>
+                <div className="flex items-center gap-2">
+                  <SignInButton 
+                    mode="modal" 
+                    fallbackRedirectUrl="/" 
+                    signUpFallbackRedirectUrl="/"
+                  >
+                    <button className="btn btn-ghost flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Sign In
+                    </button>
+                  </SignInButton>
+                  <SignUpButton 
+                    mode="modal" 
+                    fallbackRedirectUrl="/" 
+                    signInFallbackRedirectUrl="/"
+                  >
+                    <button className="btn btn-primary flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Sign Up
+                    </button>
+                  </SignUpButton>
+                </div>
+              </SignedOut>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -187,38 +217,44 @@ const Navbar = () => {
                 <span>Cart ({state.items.length})</span>
               </button>
               
-              <SignedIn>
-                <div className="space-y-2">
-                  <SubscriptionStatus />
-                  <div className="flex justify-center">
-                    <UserButton 
-                      appearance={{
-                        elements: {
-                          avatarBox: "w-10 h-10"
-                        }
-                      }}
-                      afterSignOutUrl="/"
-                    />
-                  </div>
-                </div>
-              </SignedIn>
-              
-              <SignedOut>
-                <div className="space-y-2">
-                  <SignInButton mode="modal" fallbackRedirectUrl="/" signUpFallbackRedirectUrl="/">
-                    <button className="btn-ghost w-full justify-center">
-                      <User className="w-4 h-4 mr-2" />
-                      Sign In
-                    </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal" fallbackRedirectUrl="/" signInFallbackRedirectUrl="/">
-                    <button className="btn-primary w-full justify-center">
-                      <User className="w-4 h-4 mr-2" />
-                      Sign Up
-                    </button>
-                  </SignUpButton>
-                </div>
-              </SignedOut>
+              {!isLoaded ? (
+                <div className="px-4 py-2">Loading...</div>
+              ) : (
+                <>
+                  <SignedIn>
+                    <div className="space-y-2">
+                      <SubscriptionStatus />
+                      <div className="flex justify-center">
+                        <UserButton 
+                          appearance={{
+                            elements: {
+                              avatarBox: "w-10 h-10"
+                            }
+                          }}
+                          afterSignOutUrl="/"
+                        />
+                      </div>
+                    </div>
+                  </SignedIn>
+                  
+                  <SignedOut>
+                    <div className="space-y-2">
+                      <SignInButton mode="modal" fallbackRedirectUrl="/" signUpFallbackRedirectUrl="/">
+                        <button className="btn-ghost w-full justify-center">
+                          <User className="w-4 h-4 mr-2" />
+                          Sign In
+                        </button>
+                      </SignInButton>
+                      <SignUpButton mode="modal" fallbackRedirectUrl="/" signInFallbackRedirectUrl="/">
+                        <button className="btn-primary w-full justify-center">
+                          <User className="w-4 h-4 mr-2" />
+                          Sign Up
+                        </button>
+                      </SignUpButton>
+                    </div>
+                  </SignedOut>
+                </>
+              )}
             </div>
           </motion.div>
         )}

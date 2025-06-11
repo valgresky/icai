@@ -15,7 +15,7 @@ import NotFoundPage from './pages/NotFoundPage';
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!clerkPubKey) {
-  throw new Error('Missing Clerk Publishable Key');
+  throw new Error('Missing Clerk Publishable Key - Please check your .env file');
 }
 
 // Protected route wrapper
@@ -38,6 +38,26 @@ function App() {
       signUpFallbackRedirectUrl="/"
       afterSignInUrl="/"
       afterSignUpUrl="/"
+      appearance={{
+        baseTheme: undefined,
+        variables: {
+          colorPrimary: '#3B82F6',
+          colorBackground: '#0A0A0F',
+          colorInputBackground: '#121218',
+          colorInputText: '#FFFFFF',
+          colorText: '#FFFFFF',
+        },
+        elements: {
+          formButtonPrimary: 'bg-primary-500 hover:bg-primary-600',
+          card: 'bg-background-secondary border border-neutral-700',
+          headerTitle: 'text-white',
+          headerSubtitle: 'text-neutral-300',
+          socialButtonsBlockButton: 'border border-neutral-700 text-white hover:bg-neutral-800',
+          formFieldLabel: 'text-neutral-300',
+          formFieldInput: 'bg-neutral-800 border-neutral-700 text-white',
+          footerActionLink: 'text-primary-400 hover:text-primary-300',
+        }
+      }}
     >
       <AuthProvider>
         <CartProvider>
