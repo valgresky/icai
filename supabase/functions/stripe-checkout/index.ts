@@ -10,6 +10,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const DOMAIN = Deno.env.get('DOMAIN') || 'http://localhost:3000';
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -69,7 +70,13 @@ serve(async (req) => {
     }
 
     // Parse the request body
-    const { price_id, mode, success_url, cancel_url } = await req.json();
+    const { 
+      price_id, 
+      mode = 'payment', 
+      success_url, 
+      cancel_url,
+      points_to_redeem = 0 
+    } = await req.json();
 
     if (!price_id) {
       return new Response(
@@ -92,8 +99,20 @@ serve(async (req) => {
     let customerId;
 
     if (customerError || !customerData) {
+      // Get user email from Clerk
+      const userResponse = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('CLERK_SECRET_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const userData = await userResponse.json();
+      const userEmail = userData.email_addresses?.[0]?.email_address;
+
       // Create a new Stripe customer
       const customer = await stripe.customers.create({
+        email: userEmail,
         metadata: {
           user_id: userId,
         },
@@ -110,22 +129,82 @@ serve(async (req) => {
       customerId = customerData.customer_id;
     }
 
-    // Create a checkout session
-    const session = await stripe.checkout.sessions.create({
+    // Check if user has enough points if they're trying to redeem
+    let discountAmount = 0;
+    if (points_to_redeem > 0) {
+      const { data: userPoints } = await supabase
+        .from('user_points')
+        .select('available_points')
+        .eq('user_id', userId)
+        .single();
+      
+      if (!userPoints || userPoints.available_points < points_to_redeem) {
+        return new Response(
+          JSON.stringify({ error: 'Insufficient points' }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
+      // Calculate discount (100 points = $1)
+      discountAmount = Math.floor(points_to_redeem / 100) * 100; // in cents
+    }
+
+    // Create checkout session configuration
+    const sessionConfig = {
       customer: customerId,
+      payment_method_types: ['card'],
       line_items: [
         {
           price: price_id,
           quantity: 1,
         },
       ],
-      mode: mode || 'payment',
-      success_url: success_url || `${req.headers.get('origin')}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${req.headers.get('origin')}/pricing`,
+      mode: mode,
+      success_url: success_url || `${DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancel_url || `${DOMAIN}/pricing`,
       metadata: {
         user_id: userId,
+        points_redeemed: points_to_redeem.toString(),
       },
-    });
+    };
+    
+    // Apply discount if points are being redeemed
+    if (discountAmount > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: discountAmount,
+        currency: 'usd',
+        duration: 'once',
+        metadata: {
+          user_id: userId,
+          points_redeemed: points_to_redeem.toString(),
+        }
+      });
+      
+      sessionConfig.discounts = [{ coupon: coupon.id }];
+      
+      // Deduct points immediately
+      const { error: deductError } = await supabase.rpc('deduct_points', {
+        user_id: userId,
+        points_to_deduct: points_to_redeem,
+      });
+      
+      if (deductError) {
+        console.error('Error deducting points:', deductError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to deduct points' }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
+
+    // Create the checkout session
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return new Response(
       JSON.stringify({ url: session.url }),

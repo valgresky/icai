@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LineChart, Wallet, Download, Star, Grid as Grid3x3, Clock, Workflow, ArrowUp, ArrowDown } from 'lucide-react';
+import { LineChart, Wallet, Download, Star, Grid as Grid3x3, Clock, Workflow, ArrowUp, ArrowDown, Coins } from 'lucide-react';
 import WorkflowCard from '../components/ui/WorkflowCard';
+import PointsDisplay from '../components/ui/PointsDisplay';
+import PointsHistoryTable from '../components/ui/PointsHistoryTable';
+import { useSubscription } from '../hooks/useSubscription';
+import { useTransactions } from '../hooks/useTransactions';
+import { usePoints } from '../hooks/usePoints';
+import { formatCurrency, formatDate } from '../utils/helpers';
 import { workflows } from '../data/mockData';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('library');
+  const { subscription } = useSubscription();
+  const { transactions } = useTransactions(5);
+  const { points } = usePoints();
   
   // Get 3 random workflows for demonstration
   const userWorkflows = workflows.slice(0, 3);
@@ -17,82 +26,176 @@ const DashboardPage = () => {
         
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            { icon: <Workflow className="w-6 h-6" />, label: 'Workflows', value: '12', color: 'primary' },
-            { icon: <Clock className="w-6 h-6" />, label: 'Hours Saved', value: '342', color: 'secondary' },
-            { icon: <Download className="w-6 h-6" />, label: 'Downloads', value: '68', color: 'accent' },
-            { icon: <Wallet className="w-6 h-6" />, label: 'Revenue', value: '$1,250', color: 'primary' },
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              className="glass-panel p-5"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-            >
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-${stat.color}-500/20 text-${stat.color}-500`}>
-                {stat.icon}
-              </div>
-              <p className="text-neutral-400 text-sm">{stat.label}</p>
-              <h3 className="text-2xl font-bold">{stat.value}</h3>
-            </motion.div>
-          ))}
+          <motion.div
+            className="glass-panel p-5"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-primary-500/20 text-primary-500">
+              <Workflow className="w-6 h-6" />
+            </div>
+            <p className="text-neutral-400 text-sm">Workflows</p>
+            <h3 className="text-2xl font-bold">{userWorkflows.length}</h3>
+          </motion.div>
+          
+          <motion.div
+            className="glass-panel p-5"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-secondary-500/20 text-secondary-500">
+              <Coins className="w-6 h-6" />
+            </div>
+            <p className="text-neutral-400 text-sm">Available Points</p>
+            <h3 className="text-2xl font-bold">{points?.available_points || 0}</h3>
+          </motion.div>
+          
+          <motion.div
+            className="glass-panel p-5"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-accent-500/20 text-accent-500">
+              <Download className="w-6 h-6" />
+            </div>
+            <p className="text-neutral-400 text-sm">Downloads</p>
+            <h3 className="text-2xl font-bold">{userWorkflows.reduce((sum, w) => sum + w.downloads, 0)}</h3>
+          </motion.div>
+          
+          <motion.div
+            className="glass-panel p-5"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-primary-500/20 text-primary-500">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <p className="text-neutral-400 text-sm">Subscription</p>
+            <h3 className="text-2xl font-bold">{subscription ? 'Active' : 'None'}</h3>
+          </motion.div>
         </div>
         
-        {/* Usage Chart */}
-        <div className="glass-panel p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Usage Analytics</h2>
-            <div className="flex items-center gap-2 text-sm">
-              <button className="bg-primary-500/10 text-primary-500 px-3 py-1 rounded-md">Weekly</button>
-              <button className="hover:bg-neutral-800 px-3 py-1 rounded-md">Monthly</button>
-              <button className="hover:bg-neutral-800 px-3 py-1 rounded-md">Yearly</button>
-            </div>
+        {/* Points and Subscription Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Points History */}
+          <div className="lg:col-span-2">
+            <PointsHistoryTable />
           </div>
           
-          <div className="h-64 w-full relative">
-            <div className="absolute inset-0 flex items-end justify-between px-4">
-              {Array.from({ length: 7 }).map((_, i) => {
-                const height = [60, 45, 75, 90, 60, 80, 50][i];
-                return (
-                  <div key={i} className="flex flex-col items-center">
-                    <div className="flex items-center text-xs mb-1">
-                      {i % 2 === 0 ? (
-                        <ArrowUp className="w-3 h-3 text-success-DEFAULT mr-1" />
-                      ) : (
-                        <ArrowDown className="w-3 h-3 text-error-DEFAULT mr-1" />
-                      )}
-                      {i % 2 === 0 ? '+12%' : '-8%'}
-                    </div>
-                    <motion.div
-                      className="w-12 bg-gradient-to-t from-primary-600 to-primary-400 rounded-t-md"
-                      style={{ height: 0 }}
-                      animate={{ height: `${height}%` }}
-                      transition={{ duration: 1, delay: i * 0.1 }}
-                    />
-                    <div className="text-xs text-neutral-400 mt-2">
-                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
-                    </div>
+          {/* Subscription Status */}
+          <div>
+            {subscription ? (
+              <div className="glass-panel p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-primary-500" />
+                  Active Subscription
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Plan:</span>
+                    <span className="font-medium">Premium Plan</span>
                   </div>
-                );
-              })}
-            </div>
-            
-            {/* Horizontal grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between py-4">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-full h-px bg-neutral-800" />
-              ))}
-            </div>
-            
-            <div className="absolute left-0 top-0 flex flex-col justify-between h-full py-2 text-xs text-neutral-500">
-              <span>100</span>
-              <span>75</span>
-              <span>50</span>
-              <span>25</span>
-              <span>0</span>
-            </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Status:</span>
+                    <span className="text-success-DEFAULT capitalize">{subscription.status}</span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Renews on:</span>
+                    <span>{formatDate(subscription.current_period_end)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Price:</span>
+                    <span>{formatCurrency(20)}/month</span>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-neutral-800">
+                    <button className="btn-ghost w-full">
+                      Manage Subscription
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="glass-panel p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-primary-500" />
+                  Subscription
+                </h3>
+                
+                <div className="text-center py-6">
+                  <Wallet className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
+                  <p className="text-neutral-400 mb-4">
+                    You don't have an active subscription
+                  </p>
+                  <a href="/pricing" className="btn-primary">
+                    View Plans
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+        
+        {/* Recent Transactions */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
+          
+          {transactions.length === 0 ? (
+            <div className="glass-panel p-6 text-center">
+              <Clock className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No transactions yet</h3>
+              <p className="text-neutral-400 mb-6">
+                Your purchase history will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="glass-panel overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-neutral-800">
+                      <th className="text-left p-4 text-neutral-400 font-medium">Date</th>
+                      <th className="text-left p-4 text-neutral-400 font-medium">Description</th>
+                      <th className="text-right p-4 text-neutral-400 font-medium">Amount</th>
+                      <th className="text-right p-4 text-neutral-400 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((transaction) => (
+                      <tr key={transaction.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/30">
+                        <td className="p-4 text-sm">
+                          {formatDate(transaction.created_at)}
+                        </td>
+                        <td className="p-4">
+                          {transaction.description || 'Purchase'}
+                        </td>
+                        <td className="p-4 text-right">
+                          {formatCurrency(transaction.amount / 100)}
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                            transaction.status === 'completed' 
+                              ? 'bg-success-DEFAULT/20 text-success-DEFAULT' 
+                              : 'bg-warning-DEFAULT/20 text-warning-DEFAULT'
+                          }`}>
+                            {transaction.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Tabs */}

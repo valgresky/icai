@@ -3,13 +3,18 @@ import { motion } from 'framer-motion';
 import { Check, X, Zap, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '../utils/helpers';
 import ProductCard from '../components/ui/ProductCard';
+import CheckoutForm from '../components/ui/CheckoutForm';
+import PointsDisplay from '../components/ui/PointsDisplay';
 import { products } from '../stripe-config';
 import { workflows } from '../data/mockData';
+import { useUser } from '@clerk/clerk-react';
 
 const PricingPage = () => {
   const [filter, setFilter] = useState<'all' | 'payment' | 'subscription'>('all');
   const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>({});
+  const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
+  const { user } = useUser();
 
   // Create a mapping of price IDs to actual prices from workflows
   const workflowPricing: Record<string, number> = {};
@@ -240,6 +245,57 @@ const PricingPage = () => {
           </div>
         )}
 
+        {/* Checkout Modal */}
+        {selectedProduct && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-background rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6 border-b border-neutral-800 flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Complete Purchase</h2>
+                <button 
+                  onClick={() => setSelectedProduct(null)}
+                  className="p-2 hover:bg-neutral-800 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="p-6">
+                {user ? (
+                  <CheckoutForm 
+                    priceId={selectedProduct.priceId}
+                    name={selectedProduct.name}
+                    description={selectedProduct.description}
+                    mode={selectedProduct.mode}
+                    price={workflowPricing[selectedProduct.priceId] || fallbackPricing[selectedProduct.priceId] || 0}
+                    onSuccess={() => {
+                      // Handle success (redirect happens in the component)
+                    }}
+                    onError={(error) => {
+                      console.error('Checkout error:', error);
+                    }}
+                  />
+                ) : (
+                  <div className="text-center py-6">
+                    <AlertTriangle className="w-16 h-16 text-warning-DEFAULT mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Sign In Required</h3>
+                    <p className="text-neutral-400 mb-6">
+                      Please sign in to complete your purchase
+                    </p>
+                    <button className="btn-primary">
+                      Sign In
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
           <motion.div
@@ -251,6 +307,13 @@ const PricingPage = () => {
             <p className="text-xl text-neutral-400 mb-8">
               Choose from our collection of premium n8n workflows and services. All purchases include comprehensive documentation and support.
             </p>
+
+            {/* Points Display for Logged In Users */}
+            {user && (
+              <div className="mb-8">
+                <PointsDisplay showDetails={true} className="max-w-md mx-auto" />
+              </div>
+            )}
 
             {/* Filter Buttons - Fixed with proper IDs */}
             <div className="inline-flex items-center gap-2 bg-background-secondary p-1 rounded-lg">
@@ -325,6 +388,8 @@ const PricingPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
+              onClick={() => setSelectedProduct(product)}
+              className="cursor-pointer"
             >
               <ProductCard
                 {...product}
@@ -332,6 +397,56 @@ const PricingPage = () => {
               />
             </motion.div>
           ))}
+        </div>
+
+        {/* Points Explainer Section */}
+        <div className="max-w-3xl mx-auto mt-16 mb-8">
+          <div className="glass-panel p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Coins className="w-5 h-5 text-primary-500" />
+              Earn and Redeem Points
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">
+                  <Coins className="w-5 h-5 text-primary-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Earn 100 Points for Every $1 Spent</h3>
+                  <p className="text-neutral-400 text-sm">
+                    Every purchase automatically earns you points that you can use for future discounts.
+                    Points are awarded immediately after your purchase is completed.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-success-DEFAULT/20 flex items-center justify-center shrink-0">
+                  <ArrowDown className="w-5 h-5 text-success-DEFAULT" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Redeem Points for Discounts</h3>
+                  <p className="text-neutral-400 text-sm">
+                    Use your points during checkout to get discounts on your purchases.
+                    Every 100 points equals $1 off your order.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-secondary-500/20 flex items-center justify-center shrink-0">
+                  <ArrowUp className="w-5 h-5 text-secondary-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Points Never Expire</h3>
+                  <p className="text-neutral-400 text-sm">
+                    Your points will never expire, so you can save them up for bigger discounts on future purchases.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* FAQ Section */}
@@ -358,6 +473,10 @@ const PricingPage = () => {
               {
                 q: "Do you offer refunds?",
                 a: "Yes, we offer a 30-day money-back guarantee. If you're not satisfied with your purchase, contact our support team for a full refund."
+              },
+              {
+                q: "How do I earn and redeem points?",
+                a: "You automatically earn 100 points for every $1 spent on our platform. Points can be redeemed during checkout for discounts on future purchases, with 100 points equal to $1 off."
               }
             ].map(({ q, a }) => (
               <div key={q} className="glass-panel p-6">
