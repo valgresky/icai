@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Star, Copy, Check, Wrench, ShoppingCart, Loader } from 'lucide-react';
-import { useUser, useAuth } from '@clerk/clerk-react';
+import { Star, Copy, Check, Wrench, ShoppingCart, Loader, Plus } from 'lucide-react';
+import { useUser } from '@clerk/clerk-react';
 import { formatCurrency } from '../../utils/helpers';
-import WorkflowModal from './WorkflowModal';
 import { useCart } from '../../contexts/CartContext';
+import WorkflowModal from './WorkflowModal';
 
 interface WorkflowCardProps {
   id: string;
@@ -43,9 +43,8 @@ const WorkflowCard = ({
 }: WorkflowCardProps) => {
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
   const { user } = useUser();
-  const { getToken } = useAuth();
   const { dispatch } = useCart();
   const isFree = price === 0 || price === null;
 
@@ -61,27 +60,27 @@ const WorkflowCard = ({
     }
   };
 
-  const handleAddToCart = () => {
-    if (!stripeProductId || isFree) return;
+  const handleAddToCart = async () => {
+    if (!price || !stripeProductId) {
+      alert('This workflow is not available for purchase.');
+      return;
+    }
+
+    setAddingToCart(true);
     
     try {
       dispatch({
         type: 'ADD_ITEM',
-        payload: {
-          id,
-          title,
-          price: price!,
-          quantity: 1,
-          priceId: stripeProductId,
-          type: 'workflow',
-          image
-        }
+        payload: id
       });
       
-      setAddedToCart(true);
-      setTimeout(() => setAddedToCart(false), 2000);
+      // Brief delay for visual feedback
+      setTimeout(() => {
+        setAddingToCart(false);
+      }, 500);
     } catch (error) {
       console.error('Error adding to cart:', error);
+      setAddingToCart(false);
     }
   };
 
@@ -144,17 +143,17 @@ const WorkflowCard = ({
               <div className="flex items-center gap-2">
                 {!isFree && stripeProductId && (
                   <motion.button
-                    className="btn p-2 rounded-full btn-primary group/purchase relative"
+                    className="btn p-2 rounded-full btn-primary group/cart relative"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleAddToCart}
-                    disabled={addedToCart}
+                    disabled={addingToCart}
                     title="Add to Cart"
                   >
-                    {addedToCart ? (
-                      <Check className="w-4 h-4" />
+                    {addingToCart ? (
+                      <Loader className="w-4 h-4 animate-spin" />
                     ) : (
-                      <ShoppingCart className="w-4 h-4" />
+                      <Plus className="w-4 h-4" />
                     )}
                   </motion.button>
                 )}

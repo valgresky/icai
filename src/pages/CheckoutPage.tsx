@@ -1,61 +1,71 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowLeft, CreditCard, Loader, AlertCircle, Check, Shield, Coins } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import { ShoppingCart, Trash2, Plus, Minus, CreditCard, ArrowLeft, Loader } from 'lucide-react';
 import { useUser, useAuth } from '@clerk/clerk-react';
+import { useCart } from '../contexts/CartContext';
 import { formatCurrency } from '../utils/helpers';
-import PointsRedemption from '../components/ui/PointsRedemption';
-import PointsDisplay from '../components/ui/PointsDisplay';
+import { workflows } from '../data/mockData';
 
 const CheckoutPage = () => {
-  const { state, dispatch } = useCart();
-  const { user } = useUser();
-  const { getToken } = useAuth();
-  const navigate = useNavigate();
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [pointsToRedeem, setPointsToRedeem] = useState(0);
-  
-  // Calculate discount amount (100 points = $1)
-  const discountAmount = Math.floor(pointsToRedeem / 100);
-  const finalTotal = Math.max(0, state.total - discountAmount);
+  const { user } = useUser();
+  const { getToken } = useAuth();
+  const { state, dispatch } = useCart();
+  const navigate = useNavigate();
 
+  // Redirect if cart is empty
   useEffect(() => {
-    // Redirect to marketplace if cart is empty
     if (state.items.length === 0) {
       navigate('/marketplace');
     }
   }, [state.items.length, navigate]);
 
+  const handleQuantityChange = (id: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      dispatch({ type: 'REMOVE_ITEM', payload: id });
+    } else {
+      dispatch({ 
+        type: 'UPDATE_QUANTITY', 
+        payload: { id, quantity: newQuantity } 
+      });
+    }
+  };
+
+  const handleRemoveItem = (id: string) => {
+    dispatch({ type: 'REMOVE_ITEM', payload: id });
+  };
+
   const handleCheckout = async () => {
-    if (state.items.length === 0) return;
-    
     if (!user) {
-      // Redirect to sign in if not authenticated
       navigate('/sign-in');
       return;
     }
 
     setLoading(true);
     setError('');
-    
+
     try {
-      // Get auth token
       const token = await getToken();
       
       if (!token) {
-        throw new Error('Unable to authenticate. Please try signing in again.');
+        throw new Error('Unable to authenticate. Please sign in again.');
       }
-      
-      // Create line items from cart
-      const lineItems = state.items.map(item => ({
-        price_id: item.priceId,
-        quantity: item.quantity
-      }));
-      
-      // Call Stripe checkout
+
+      // Prepare checkout items with Stripe price IDs
+      const checkoutItems = state.items.map(item => {
+        const workflow = workflows.find(w => w.id === item.id);
+        return {
+          price_id: workflow?.stripeProductId || '',
+          quantity: item.quantity
+        };
+      }).filter(item => item.price_id); // Remove items without price IDs
+
+      if (checkoutItems.length === 0) {
+        throw new Error('No valid items for checkout');
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
         method: 'POST',
         headers: {
@@ -63,8 +73,7 @@ const CheckoutPage = () => {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          items: lineItems,
-          points_to_redeem: pointsToRedeem,
+          items: checkoutItems,
           success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/checkout`,
         }),
@@ -82,6 +91,8 @@ const CheckoutPage = () => {
       }
 
       if (data.url) {
+        // Clear cart before redirecting
+        dispatch({ type: 'CLEAR_CART' });
         // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else {
@@ -95,143 +106,143 @@ const CheckoutPage = () => {
     }
   };
 
-  const handlePointsChange = (points: number) => {
-    setPointsToRedeem(points);
-  };
-
-  const handleRemoveItem = (id: string) => {
-    dispatch({ type: 'REMOVE_ITEM', payload: id });
-  };
-
-  const handleUpdateQuantity = (id: string, quantity: number) => {
-    dispatch({ 
-      type: 'UPDATE_QUANTITY', 
-      payload: { id, quantity } 
-    });
-  };
+  if (state.items.length === 0) {
+    return null; // Will redirect via useEffect
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <button 
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="btn-ghost mb-4 flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to shopping
+              Back to Marketplace
             </button>
-            <h1 className="text-3xl font-bold mt-2">Checkout</h1>
-          </div>
+            <h1 className="flex items-center gap-3">
+              <ShoppingCart className="w-8 h-8 text-primary-500" />
+              Checkout
+            </h1>
+            <p className="text-neutral-400 mt-2">
+              Review your items and complete your purchase
+            </p>
+          </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items - Left Column */}
+            {/* Cart Items */}
             <div className="lg:col-span-2">
-              <div className="glass-panel p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-primary-500" />
-                  Your Cart ({state.items.length} {state.items.length === 1 ? 'item' : 'items'})
-                </h2>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="glass-panel p-6"
+              >
+                <h2 className="text-xl font-semibold mb-6">Your Items</h2>
+                
+                <div className="space-y-4">
+                  {state.items.map((item) => {
+                    const workflow = workflows.find(w => w.id === item.id);
+                    if (!workflow) return null;
 
-                {state.items.length === 0 ? (
-                  <div className="text-center py-8">
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-neutral-400" />
-                    <p className="text-neutral-400">Your cart is empty</p>
-                    <button 
-                      onClick={() => navigate('/marketplace')}
-                      className="btn-primary mt-4"
-                    >
-                      Browse Marketplace
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {state.items.map((item) => (
-                      <div 
-                        key={item.id}
-                        className="flex items-center gap-4 p-4 bg-neutral-800/30 rounded-lg"
-                      >
-                        {item.image && (
-                          <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                            <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                          </div>
-                        )}
+                    return (
+                      <div key={item.id} className="glass-card p-4 flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+                          <img
+                            src={workflow.image}
+                            alt={workflow.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                         
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{item.title}</h3>
-                          <div className="flex items-center justify-between mt-2">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                                className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-700 hover:bg-neutral-600 transition-colors"
-                              >
-                                -
-                              </button>
-                              <span className="w-8 text-center">{item.quantity}</span>
-                              <button
-                                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                                className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-700 hover:bg-neutral-600 transition-colors"
-                              >
-                                +
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
-                              <button
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="text-neutral-400 hover:text-error-DEFAULT transition-colors"
-                              >
-                                Remove
-                              </button>
-                            </div>
+                          <h3 className="font-medium text-lg line-clamp-1">{workflow.title}</h3>
+                          <p className="text-sm text-neutral-400 line-clamp-2">{workflow.description}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-primary-400 text-sm">{workflow.category}</span>
+                            <span className="text-neutral-600">•</span>
+                            <span className="text-neutral-400 text-sm">{workflow.downloads} downloads</span>
                           </div>
                         </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                              className="p-1 hover:bg-neutral-800 rounded"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <button
+                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                              className="p-1 hover:bg-neutral-800 rounded"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="text-right">
+                            <div className="font-semibold">{formatCurrency(item.price)}</div>
+                            {item.quantity > 1 && (
+                              <div className="text-sm text-neutral-400">
+                                {formatCurrency(item.price * item.quantity)} total
+                              </div>
+                            )}
+                          </div>
+                          
+                          <button
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-2 hover:bg-neutral-800 rounded text-error-DEFAULT"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Points Redemption */}
-              {state.items.length > 0 && (
-                <PointsRedemption onPointsChange={handlePointsChange} />
-              )}
+                    );
+                  })}
+                </div>
+              </motion.div>
             </div>
 
-            {/* Order Summary - Right Column */}
-            <div>
-              <div className="glass-panel p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+            {/* Order Summary */}
+            <div className="lg:col-span-1">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="glass-panel p-6 sticky top-24"
+              >
+                <h2 className="text-xl font-semibold mb-6">Order Summary</h2>
                 
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between">
-                    <span className="text-neutral-400">Subtotal</span>
+                    <span>Subtotal ({state.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
                     <span>{formatCurrency(state.total)}</span>
                   </div>
-                  
-                  {pointsToRedeem > 0 && (
-                    <div className="flex justify-between text-primary-400">
-                      <span className="flex items-center gap-1">
-                        <Coins className="w-4 h-4" />
-                        Points Discount ({pointsToRedeem} pts)
-                      </span>
-                      <span>-{formatCurrency(discountAmount)}</span>
+                  <div className="flex justify-between text-sm text-neutral-400">
+                    <span>Processing Fee</span>
+                    <span>Free</span>
+                  </div>
+                  <div className="border-t border-neutral-800 pt-3">
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span>Total</span>
+                      <span>{formatCurrency(state.total)}</span>
                     </div>
-                  )}
-                  
-                  <div className="pt-3 border-t border-neutral-800 flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span>{formatCurrency(finalTotal)}</span>
                   </div>
                 </div>
 
                 {error && (
                   <div className="mb-4 p-3 bg-error-DEFAULT/10 border border-error-DEFAULT/20 rounded-lg">
-                    <div className="flex items-center gap-2 text-error-DEFAULT text-sm">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{error}</span>
-                    </div>
+                    <p className="text-error-DEFAULT text-sm">{error}</p>
                   </div>
                 )}
 
@@ -248,30 +259,29 @@ const CheckoutPage = () => {
                   ) : (
                     <>
                       <CreditCard className="w-5 h-5" />
-                      Complete Purchase
+                      Proceed to Payment
                     </>
                   )}
                 </button>
 
-                <div className="mt-4 text-xs text-neutral-500 flex items-center justify-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  <span>Secure checkout powered by Stripe</span>
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-neutral-500">
+                    Secure payment powered by Stripe
+                  </p>
                 </div>
-              </div>
 
-              {/* Points Display */}
-              <PointsDisplay />
-              
-              {/* Accepted Payment Methods */}
-              <div className="glass-panel p-4 mt-6">
-                <h3 className="text-sm font-medium mb-3 text-neutral-400">We Accept</h3>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-8 bg-neutral-800 rounded flex items-center justify-center text-xs font-medium">Visa</div>
-                  <div className="w-12 h-8 bg-neutral-800 rounded flex items-center justify-center text-xs font-medium">MC</div>
-                  <div className="w-12 h-8 bg-neutral-800 rounded flex items-center justify-center text-xs font-medium">Amex</div>
-                  <div className="w-12 h-8 bg-neutral-800 rounded flex items-center justify-center text-xs font-medium">Disc</div>
+                {/* What's Included */}
+                <div className="mt-6 pt-6 border-t border-neutral-800">
+                  <h3 className="font-medium mb-3">What's Included</h3>
+                  <ul className="space-y-2 text-sm text-neutral-400">
+                    <li>• Complete n8n workflow files</li>
+                    <li>• Detailed setup instructions</li>
+                    <li>• API configuration guides</li>
+                    <li>• 30 days of email support</li>
+                    <li>• Lifetime updates</li>
+                  </ul>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>

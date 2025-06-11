@@ -1,10 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, Trash, Plus, Minus, Loader, AlertCircle, ArrowRight } from 'lucide-react';
+import { X, ShoppingCart, Trash, Plus, Minus, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { formatCurrency } from '../../utils/helpers';
-import { useState } from 'react';
-import { useUser } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
+import { workflows } from '../../data/mockData';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -13,22 +12,20 @@ interface CartDrawerProps {
 
 const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
   const { state, dispatch } = useCart();
-  const [isLoading, setIsLoading] = useState(false);
-  const { user } = useUser();
-  const navigate = useNavigate();
 
-  const handleProceedToCheckout = () => {
-    if (state.items.length === 0) return;
-    
-    if (!user) {
-      // Redirect to sign in if not authenticated
-      window.location.href = '/sign-in';
-      return;
+  const handleQuantityChange = (id: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      dispatch({ type: 'REMOVE_ITEM', payload: id });
+    } else {
+      dispatch({ 
+        type: 'UPDATE_QUANTITY', 
+        payload: { id, quantity: newQuantity } 
+      });
     }
+  };
 
-    // Navigate to checkout page
-    navigate('/checkout');
-    onClose();
+  const handleRemoveItem = (id: string) => {
+    dispatch({ type: 'REMOVE_ITEM', payload: id });
   };
 
   return (
@@ -53,15 +50,20 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
             className="fixed top-0 right-0 h-full w-full max-w-md bg-background shadow-xl z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="p-4 border-b border-neutral-800">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShoppingCart className="w-5 h-5" />
                   <h2 className="text-lg font-semibold">Shopping Cart</h2>
+                  {state.items.length > 0 && (
+                    <span className="bg-primary-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {state.items.reduce((sum, item) => sum + item.quantity, 0)}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full"
+                  className="p-2 hover:bg-neutral-800 rounded-full"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -72,75 +74,100 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
             <div className="flex-1 overflow-y-auto p-4">
               {state.items.length === 0 ? (
                 <div className="text-center py-8">
-                  <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-neutral-400" />
-                  <p className="text-neutral-600 dark:text-neutral-400">Your cart is empty</p>
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-neutral-600" />
+                  <p className="text-neutral-400 mb-4">Your cart is empty</p>
+                  <Link
+                    to="/marketplace"
+                    onClick={onClose}
+                    className="btn-primary inline-flex items-center gap-2"
+                  >
+                    Browse Workflows
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {state.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="glass-card p-4 flex items-center gap-4"
-                    >
-                      {item.image && (
-                        <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                          <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <h3 className="font-medium">{item.title}</h3>
-                        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                          {formatCurrency(item.price)}
-                        </p>
-                      </div>
+                  {state.items.map((item) => {
+                    const workflow = workflows.find(w => w.id === item.id);
+                    if (!workflow) return null;
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => dispatch({
-                            type: 'UPDATE_QUANTITY',
-                            payload: { id: item.id, quantity: Math.max(0, item.quantity - 1) }
-                          })}
-                          className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-8 text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => dispatch({
-                            type: 'UPDATE_QUANTITY',
-                            payload: { id: item.id, quantity: item.quantity + 1 }
-                          })}
-                          className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => dispatch({ type: 'REMOVE_ITEM', payload: item.id })}
-                          className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded text-error-DEFAULT ml-2"
-                        >
-                          <Trash className="w-4 h-4" />
-                        </button>
+                    return (
+                      <div
+                        key={item.id}
+                        className="glass-card p-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
+                            <img
+                              src={workflow.image}
+                              alt={workflow.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-sm line-clamp-2">{workflow.title}</h3>
+                            <p className="text-xs text-neutral-400 mt-1">{workflow.category}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="font-semibold text-sm">{formatCurrency(item.price)}</span>
+                              <button
+                                onClick={() => handleRemoveItem(item.id)}
+                                className="p-1 hover:bg-neutral-800 rounded text-error-DEFAULT"
+                              >
+                                <Trash className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                              className="p-1 hover:bg-neutral-800 rounded"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="w-6 text-center text-sm">{item.quantity}</span>
+                            <button
+                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                              className="p-1 hover:bg-neutral-800 rounded"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                          
+                          {item.quantity > 1 && (
+                            <span className="text-xs text-neutral-400">
+                              {formatCurrency(item.price * item.quantity)} total
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             {/* Footer */}
             {state.items.length > 0 && (
-              <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
+              <div className="p-4 border-t border-neutral-800">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-semibold">Total</span>
-                  <span className="font-semibold">{formatCurrency(state.total)}</span>
+                  <span className="font-semibold text-lg">{formatCurrency(state.total)}</span>
                 </div>
-                <button 
+                <Link
+                  to="/checkout"
+                  onClick={onClose}
                   className="btn-primary w-full py-3 flex items-center justify-center gap-2"
-                  onClick={handleProceedToCheckout}
                 >
-                  <ArrowRight className="w-5 h-5" />
-                  Proceed to Checkout
-                </button>
+                  <ShoppingCart className="w-4 h-4" />
+                  Checkout
+                </Link>
+                <p className="text-xs text-neutral-500 text-center mt-2">
+                  Secure payment with Stripe
+                </p>
               </div>
             )}
           </motion.div>

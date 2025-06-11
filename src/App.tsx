@@ -9,9 +9,9 @@ import WorkflowDetailPage from './pages/WorkflowDetailPage';
 import DashboardPage from './pages/DashboardPage';
 import CreatorPage from './pages/CreatorPage';
 import PricingPage from './pages/PricingPage';
+import CheckoutPage from './pages/CheckoutPage';
 import SuccessPage from './pages/SuccessPage';
 import BrowserAgentPage from './pages/BrowserAgentPage';
-import CheckoutPage from './pages/CheckoutPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -69,9 +69,9 @@ function App() {
               <Route path="/marketplace" element={<MarketplacePage />} />
               <Route path="/workflow/:id" element={<WorkflowDetailPage />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/success" element={<SuccessPage />} />
               <Route path="/browser-agent" element={<BrowserAgentPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
               
               {/* Protected Routes */}
               <Route 

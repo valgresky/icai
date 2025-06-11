@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, Loader, Check, AlertCircle } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import { useCart } from '../../contexts/CartContext';
+import { formatCurrency } from '../../utils/helpers';
 
 interface ProductCardProps {
   priceId: string;
@@ -51,7 +52,7 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-xl font-semibold line-clamp-2">{name}</h3>
           <div className="text-right ml-4">
-            <div className="text-2xl font-bold">${price}</div>
+            <div className="text-2xl font-bold">{formatCurrency(price)}</div>
             <div className="text-sm text-neutral-400">
               {mode === 'subscription' ? '/month' : 'one-time'}
             </div>
