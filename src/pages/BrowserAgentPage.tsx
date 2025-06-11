@@ -487,6 +487,9 @@ const BrowserAgentPage = () => {
               </div>
             </motion.div>
 
+            {/* Section Spacer for Desktop */}
+            <div className="section-spacer" />
+
             {/* Live Browser View - Full Width Bottom */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -679,7 +682,7 @@ const BrowserAgentPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 }}
-            className="mt-8"
+            className="mt-12"
           >
             <div className="glass-panel p-6">
               <h3 className="text-lg font-semibold mb-4">How It Works</h3>
@@ -731,13 +734,20 @@ const BrowserAgentPage = () => {
           display: grid;
           grid-template-columns: 1fr 1fr;
           grid-template-rows: 400px auto;
-          gap: 20px;
+          gap: 24px;
           max-width: 1400px;
           margin: 0 auto;
+          margin-bottom: 40px;
         }
 
         .bento-panel {
           min-height: 400px;
+        }
+
+        .section-spacer {
+          grid-column: 1 / -1;
+          height: 40px;
+          width: 100%;
         }
 
         .browser-view-container {
@@ -747,6 +757,7 @@ const BrowserAgentPage = () => {
           padding: 0;
           box-shadow: 0 10px 30px rgba(0,0,0,0.3);
           overflow: hidden;
+          margin-top: 20px;
         }
 
         .browser-iframe {
@@ -802,10 +813,17 @@ const BrowserAgentPage = () => {
           .bento-grid {
             grid-template-columns: 1fr;
             grid-template-rows: auto auto auto;
+            gap: 16px;
+            margin-bottom: 20px;
+          }
+          
+          .section-spacer {
+            height: 20px;
           }
           
           .browser-view-container {
             height: 400px !important;
+            margin-top: 16px;
           }
         }
 
@@ -814,8 +832,13 @@ const BrowserAgentPage = () => {
             min-height: 300px;
           }
           
+          .section-spacer {
+            display: none;
+          }
+          
           .browser-view-container {
             height: 300px !important;
+            margin-top: 16px;
           }
         }
       `}</style>
