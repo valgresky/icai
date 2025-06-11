@@ -3,12 +3,90 @@
 @tailwind utilities;
 
 @layer base {
+  /* Default Dark Theme */
+  :root {
+    --background: 10 10 15; /* #0A0A0F */
+    --background-secondary: 18 18 24; /* #121218 */
+    --foreground: 255 255 255;
+    --card: 18 18 24;
+    --card-foreground: 255 255 255;
+    --popover: 18 18 24;
+    --popover-foreground: 255 255 255;
+    --primary: 59 130 246;
+    --primary-foreground: 255 255 255;
+    --secondary: 168 85 247;
+    --secondary-foreground: 255 255 255;
+    --muted: 75 85 99;
+    --muted-foreground: 156 163 175;
+    --accent: 16 185 129;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 31 41 55;
+    --input: 31 41 55;
+    --ring: 59 130 246;
+    --radius: 0.5rem;
+  }
+  
+  /* Light Theme */
+  .light {
+    --background: 255 255 255;
+    --background-secondary: 249 250 251;
+    --foreground: 17 24 39;
+    --card: 255 255 255;
+    --card-foreground: 17 24 39;
+    --popover: 255 255 255;
+    --popover-foreground: 17 24 39;
+    --primary: 59 130 246;
+    --primary-foreground: 255 255 255;
+    --secondary: 168 85 247;
+    --secondary-foreground: 255 255 255;
+    --muted: 243 244 246;
+    --muted-foreground: 107 114 128;
+    --accent: 16 185 129;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 229 231 235;
+    --input: 229 231 235;
+    --ring: 59 130 246;
+  }
+  
+  /* Glass Theme */
+  .glass {
+    --background: 15 15 20; /* Dark base for glass effect */
+    --background-secondary: 255 255 255 0.05; /* Translucent */
+    --foreground: 255 255 255;
+    --card: 255 255 255 0.08;
+    --card-foreground: 255 255 255;
+    --popover: 255 255 255 0.1;
+    --popover-foreground: 255 255 255;
+    --primary: 59 130 246;
+    --primary-foreground: 255 255 255;
+    --secondary: 168 85 247;
+    --secondary-foreground: 255 255 255;
+    --muted: 255 255 255 0.15;
+    --muted-foreground: 255 255 255 0.7;
+    --accent: 16 185 129;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 255 255 255 0.1;
+    --input: 255 255 255 0.1;
+    --ring: 59 130 246 0.5;
+    
+    /* Glass-specific variables */
+    --glass-blur: 16px;
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    --glass-border: 255 255 255 0.18;
+  }
+
   html {
     @apply scroll-smooth;
   }
   
   body {
-    @apply bg-background text-neutral-100 font-sans overflow-x-hidden;
+    @apply bg-background text-foreground font-sans overflow-x-hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -66,7 +144,7 @@
   }
   
   .btn-ghost {
-    @apply btn bg-transparent hover:bg-neutral-800 border border-neutral-700;
+    @apply btn bg-transparent hover:bg-neutral-800 border border-neutral-700 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 light:border-neutral-300 glass:hover:bg-white/10 glass:border-white/20;
   }
   
   .btn-glass {
@@ -76,6 +154,66 @@
   .text-gradient {
     @apply bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 bg-clip-text text-transparent;
   }
+}
+
+/* Glass theme specific styles */
+.glass {
+  /* Background pattern for glass theme */
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: 
+      radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.3) 0%, transparent 40%);
+    filter: blur(100px);
+  }
+  
+  /* All cards get glass effect */
+  .glass-card, .glass-panel {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 
+      0 8px 32px 0 rgba(31, 38, 135, 0.2),
+      inset 0 0 20px rgba(255, 255, 255, 0.05) !important;
+  }
+  
+  /* Inputs in glass theme */
+  input, textarea, select {
+    @apply bg-white/5 border-white/10 backdrop-blur-sm;
+  }
+}
+
+/* Light theme adjustments */
+.light {
+  color-scheme: light;
+  
+  /* Shadows for light theme */
+  .glass-card, .glass-panel {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  }
+  
+  .glass-card:hover, .glass-panel:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  
+  /* Adjust text colors for better contrast */
+  .text-neutral-400 {
+    @apply text-neutral-600;
+  }
+  
+  .text-neutral-300 {
+    @apply text-neutral-700;
+  }
+}
+
+/* Dark and glass themes */
+.dark, .glass {
+  color-scheme: dark;
 }
 
 /* Custom scrollbar */
@@ -94,6 +232,21 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-neutral-600;
+}
+
+/* Glass theme scrollbar */
+.glass::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+
+.glass::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.glass::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Animation utilities */

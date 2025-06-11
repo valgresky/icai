@@ -1,15 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         background: {
-          DEFAULT: '#0A0A0F',
-          secondary: '#121218',
+          DEFAULT: 'rgb(var(--background) / <alpha-value>)',
+          secondary: 'rgb(var(--background-secondary) / <alpha-value>)',
         },
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        card: 'rgb(var(--card) / <alpha-value>)',
+        'card-foreground': 'rgb(var(--card-foreground) / <alpha-value>)',
         primary: {
-          DEFAULT: '#3B82F6',
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
           50: '#EBF2FF',
           100: '#D7E5FF',
           200: '#AECAFF',
@@ -22,7 +26,7 @@ export default {
           900: '#041D4B',
         },
         secondary: {
-          DEFAULT: '#A855F7',
+          DEFAULT: 'rgb(var(--secondary) / <alpha-value>)',
           50: '#F6EBFF',
           100: '#EDD7FF',
           200: '#DBAEFF',
@@ -35,7 +39,7 @@ export default {
           900: '#29024A',
         },
         accent: {
-          DEFAULT: '#10B981',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
           50: '#E7FBF4',
           100: '#CFF7E9',
           200: '#9FEFD4',

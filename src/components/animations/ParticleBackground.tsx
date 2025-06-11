@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useTheme } from '../../providers/ThemeProvider';
 
 interface Particle {
   x: number;
@@ -14,6 +15,7 @@ const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particles: Particle[] = useRef<Particle[]>([]).current;
   const animationFrameId = useRef<number>();
+  const { theme } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -34,13 +36,24 @@ const ParticleBackground = () => {
       particles.length = 0;
       const particleCount = Math.min(50, Math.floor(window.innerWidth * window.innerHeight / 15000));
       
-      for (let i = 0; i < particleCount; i++) {
-        const size = Math.random() * 1.5 + 0.5;
-        const colors = [
+      // Different colors based on theme
+      let colors;
+      if (theme === 'glass') {
+        colors = [
+          'rgba(255, 255, 255, 0.4)',
+          'rgba(255, 255, 255, 0.3)',
+          'rgba(255, 255, 255, 0.2)',
+        ];
+      } else {
+        colors = [
           'rgba(59, 130, 246, 0.6)', // primary
           'rgba(168, 85, 247, 0.6)',  // secondary
           'rgba(16, 185, 129, 0.6)',  // accent
         ];
+      }
+      
+      for (let i = 0; i < particleCount; i++) {
+        const size = Math.random() * 1.5 + 0.5;
         
         particles.push({
           x: Math.random() * canvas.width,
@@ -87,14 +100,14 @@ const ParticleBackground = () => {
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [particles]);
+  }, [particles, theme]);
 
   return (
     <motion.canvas
       ref={canvasRef}
       className="fixed inset-0 -z-10 pointer-events-none"
       initial={{ opacity: 0 }}
-      animate={{ opacity: 0.8 }}
+      animate={{ opacity: theme === 'glass' ? 0.4 : 0.8 }}
       transition={{ duration: 1 }}
     />
   );

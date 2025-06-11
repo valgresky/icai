@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './providers/ThemeProvider';
 import Layout from './components/layout/Layout';
 import HomePage from './pages/HomePage';
 import MarketplacePage from './pages/MarketplacePage';
@@ -61,41 +62,43 @@ function App() {
         }
       }}
     >
-      <AuthProvider>
-        <CartProvider>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/marketplace" element={<MarketplacePage />} />
-              <Route path="/workflow/:id" element={<WorkflowDetailPage />} />
-              <Route path="/pricing" element={<PricingPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/success" element={<SuccessPage />} />
-              <Route path="/browser-agent" element={<BrowserAgentPage />} />
-              
-              {/* Protected Routes */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/creator" 
-                element={
-                  <ProtectedRoute>
-                    <CreatorPage />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Layout>
-        </CartProvider>
-      </AuthProvider>
+      <ThemeProvider defaultTheme="dark">
+        <AuthProvider>
+          <CartProvider>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/marketplace" element={<MarketplacePage />} />
+                <Route path="/workflow/:id" element={<WorkflowDetailPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/success" element={<SuccessPage />} />
+                <Route path="/browser-agent" element={<BrowserAgentPage />} />
+                
+                {/* Protected Routes */}
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/creator" 
+                  element={
+                    <ProtectedRoute>
+                      <CreatorPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Layout>
+          </CartProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ClerkProvider>
   );
 }

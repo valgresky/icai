@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Workflow, Twitter, Github, Linkedin, Mail } from 'lucide-react';
+import { useTheme } from '../../providers/ThemeProvider';
 
 const Footer = () => {
+  const { theme } = useTheme();
+  
   return (
-    <footer className="bg-background-secondary border-t border-neutral-800/50 pt-16 pb-8">
+    <footer className={`bg-background-secondary border-t border-neutral-800/50 dark:border-neutral-800/50 light:border-neutral-300/20 glass:border-white/10 pt-16 pb-8`}>
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           <div>
@@ -11,7 +14,7 @@ const Footer = () => {
               <Workflow className="h-8 w-8 text-primary-500" />
               <span className="font-display font-bold text-xl">Inner Circle AI</span>
             </Link>
-            <p className="text-neutral-400 mb-6">
+            <p className="text-neutral-400 dark:text-neutral-400 light:text-neutral-600 glass:text-neutral-300 mb-6">
               The ultimate destination for n8n workflows. Discover, share, and monetize your automation expertise.
             </p>
             <div className="flex space-x-4">
@@ -64,8 +67,8 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-neutral-800 pt-8 mt-8 text-center">
-          <p className="text-neutral-500 text-sm">
+        <div className="border-t border-neutral-800 dark:border-neutral-800 light:border-neutral-300/20 glass:border-white/10 pt-8 mt-8 text-center">
+          <p className="text-neutral-500">
             © {new Date().getFullYear()} Inner Circle AI. All rights reserved.
           </p>
         </div>

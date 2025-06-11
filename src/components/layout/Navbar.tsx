@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Workflow, Search, ShoppingCart, User, Sun, Moon } from 'lucide-react';
+import { Menu, X, Workflow, Search, ShoppingCart, User, Sun, Moon, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SignInButton, SignUpButton, UserButton, useUser, SignedIn, SignedOut, useClerk } from '@clerk/clerk-react';
 import { cn } from '../../utils/helpers';
@@ -8,6 +8,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useCart } from '../../contexts/CartContext';
 import CartDrawer from '../ui/CartDrawer';
 import SubscriptionStatus from '../ui/SubscriptionStatus';
+import ThemeToggle from '../ui/ThemeToggle';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -55,7 +56,7 @@ const Navbar = () => {
     <header 
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-        isScrolled ? 'bg-background/80 backdrop-blur-md border-b border-neutral-200/50 dark:border-neutral-800/50 py-2' : 'py-4'
+        isScrolled ? 'bg-background/80 backdrop-blur-md border-b border-neutral-200/50 dark:border-neutral-800/50 light:border-neutral-300/50 glass:border-white/10 py-2' : 'py-4'
       )}
     >
       <div className="container mx-auto px-4 flex justify-between items-center">
@@ -72,7 +73,7 @@ const Navbar = () => {
               to={link.href}
               className={cn(
                 'text-sm font-medium transition-colors hover:text-primary-400',
-                location.pathname === link.href ? 'text-primary-500' : 'text-neutral-700 dark:text-neutral-300'
+                location.pathname === link.href ? 'text-primary-500' : 'text-neutral-700 dark:text-neutral-300 light:text-neutral-600 glass:text-neutral-200'
               )}
             >
               {link.label}
@@ -82,16 +83,7 @@ const Navbar = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <button 
-            onClick={toggleTheme}
-            className="btn-ghost rounded-full p-2"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </button>
+          <ThemeToggle />
           
           <button className="btn-ghost rounded-full p-2">
             <Search className="w-5 h-5" />
@@ -161,7 +153,7 @@ const Navbar = () => {
         {/* Mobile Menu Button */}
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden p-2 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          className="md:hidden p-2 rounded-lg text-neutral-700 dark:text-neutral-300 light:text-neutral-600 glass:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 glass:hover:bg-white/10"
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -175,25 +167,15 @@ const Navbar = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden bg-background border-b border-neutral-200 dark:border-neutral-800"
+            className="md:hidden bg-background border-b border-neutral-200 dark:border-neutral-800 light:border-neutral-300 glass:border-white/10"
           >
             <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-              <button 
-                onClick={toggleTheme}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                {theme === 'dark' ? (
-                  <>
-                    <Sun className="w-5 h-5" />
-                    <span>Light Mode</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="w-5 h-5" />
-                    <span>Dark Mode</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center justify-between">
+                <ThemeToggle />
+                <span className="text-sm text-neutral-500">
+                  {theme === 'dark' ? 'Dark Mode' : theme === 'light' ? 'Light Mode' : 'Glass Mode'}
+                </span>
+              </div>
               
               {links.map((link) => (
                 <Link
@@ -203,7 +185,7 @@ const Navbar = () => {
                     'py-2 px-4 rounded-lg transition-colors',
                     location.pathname === link.href 
                       ? 'bg-primary-500/10 text-primary-500' 
-                      : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                      : 'text-neutral-700 dark:text-neutral-300 light:text-neutral-600 glass:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 glass:hover:bg-white/10'
                   )}
                 >
                   {link.label}
@@ -215,7 +197,7 @@ const Navbar = () => {
                   setIsCartOpen(true);
                   setIsOpen(false);
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 glass:hover:bg-white/10"
               >
                 <ShoppingCart className="w-5 h-5" />
                 <span>Cart ({state.items.length})</span>
