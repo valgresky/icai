@@ -64,9 +64,18 @@ const PricingPage = () => {
   const validateStripeConfig = () => {
     const issues = [];
     
-    // Check if Stripe key exists
+    // Check if Clerk key exists (since we're using Clerk for auth)
     if (!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) {
       issues.push('Missing VITE_CLERK_PUBLISHABLE_KEY');
+    }
+    
+    // Check if Supabase keys exist
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      issues.push('Missing VITE_SUPABASE_URL');
+    }
+    
+    if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      issues.push('Missing VITE_SUPABASE_ANON_KEY');
     }
     
     // Check if products have valid price IDs
@@ -243,9 +252,11 @@ const PricingPage = () => {
               Choose from our collection of premium n8n workflows and services. All purchases include comprehensive documentation and support.
             </p>
 
-            {/* Filter Buttons */}
+            {/* Filter Buttons - Fixed with proper IDs */}
             <div className="inline-flex items-center gap-2 bg-background-secondary p-1 rounded-lg">
               <button
+                id="filter-all"
+                name="filter-all"
                 onClick={() => setFilter('all')}
                 className={cn(
                   'px-4 py-2 rounded-md transition-colors',
@@ -255,6 +266,8 @@ const PricingPage = () => {
                 All Products ({products.length})
               </button>
               <button
+                id="filter-payment"
+                name="filter-payment"
                 onClick={() => setFilter('payment')}
                 className={cn(
                   'px-4 py-2 rounded-md transition-colors',
@@ -264,6 +277,8 @@ const PricingPage = () => {
                 One-time Purchase ({products.filter(p => p.mode === 'payment').length})
               </button>
               <button
+                id="filter-subscription"
+                name="filter-subscription"
                 onClick={() => setFilter('subscription')}
                 className={cn(
                   'px-4 py-2 rounded-md transition-colors',
