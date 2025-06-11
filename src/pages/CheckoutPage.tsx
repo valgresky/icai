@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Trash2, Plus, Minus, CreditCard, ArrowLeft, Loader, Coins } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, CreditCard, ArrowLeft, Loader, Coins, ArrowDown, ArrowUp } from 'lucide-react';
 import { useUser, useAuth, SignInButton } from '@clerk/clerk-react';
 import { useCart } from '../contexts/CartContext';
 import { formatCurrency } from '../utils/helpers';
@@ -277,10 +277,46 @@ const CheckoutPage = () => {
 
                 {/* Points Redemption */}
                 {user && points && points.available_points >= 100 && (
-                  <PointsRedemption 
-                    onPointsChange={handlePointsChange}
-                    className="mb-6"
-                  />
+                  <div className="glass-panel p-4 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-medium flex items-center gap-2">
+                        <Coins className="w-4 h-4 text-primary-500" />
+                        Use Your Points
+                      </h3>
+                      <span className="text-sm text-neutral-400">
+                        {points.available_points} available
+                      </span>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm text-neutral-400 mb-2">
+                        Points to redeem (in increments of 100)
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max={points.available_points}
+                        step="100"
+                        value={pointsToRedeem}
+                        onChange={(e) => setPointsToRedeem(parseInt(e.target.value))}
+                        className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-neutral-500 mt-1">
+                        <span>0</span>
+                        <span>{points.available_points}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-sm text-neutral-400">Points selected:</div>
+                      <div className="font-medium">{pointsToRedeem}</div>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-sm text-neutral-400">Discount value:</div>
+                      <div className="font-bold text-primary-500">${(pointsToRedeem / 100).toFixed(2)}</div>
+                    </div>
+                  </div>
                 )}
 
                 {error && (

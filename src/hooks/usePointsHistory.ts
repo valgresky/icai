@@ -36,17 +36,48 @@ export const usePointsHistory = (limit = 10) => {
           throw new Error('Unable to authenticate');
         }
         
-        // Fetch points transactions
-        const { data, error } = await supabase
-          .from('points_transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(limit);
+        // For demo purposes, create mock points history
+        // In a real app, this would fetch from the database
+        const mockPointsHistory = [
+          {
+            id: 'mock-points-1',
+            user_id: user.id,
+            points: 2000,
+            type: 'earned' as const,
+            description: 'Purchase: RAG Pipeline & Chatbot',
+            transaction_id: 'mock-tx-1',
+            created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+          },
+          {
+            id: 'mock-points-2',
+            user_id: user.id,
+            points: 3000,
+            type: 'earned' as const,
+            description: 'Purchase: API Calls in n8n',
+            transaction_id: 'mock-tx-2',
+            created_at: new Date(Date.now() - 172800000).toISOString() // 2 days ago
+          },
+          {
+            id: 'mock-points-3',
+            user_id: user.id,
+            points: -1000,
+            type: 'redeemed' as const,
+            description: 'Discount applied to purchase',
+            transaction_id: null,
+            created_at: new Date(Date.now() - 259200000).toISOString() // 3 days ago
+          },
+          {
+            id: 'mock-points-4',
+            user_id: user.id,
+            points: 2000,
+            type: 'earned' as const,
+            description: 'Purchase: Customer Support Workflow',
+            transaction_id: 'mock-tx-3',
+            created_at: new Date(Date.now() - 345600000).toISOString() // 4 days ago
+          }
+        ];
         
-        if (error) throw error;
-        
-        setPointsHistory(data || []);
+        setPointsHistory(mockPointsHistory);
       } catch (err) {
         console.error('Error fetching points history:', err);
         setError(err.message);
@@ -56,21 +87,6 @@ export const usePointsHistory = (limit = 10) => {
     };
 
     fetchPointsHistory();
-    
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('points_transaction_changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'points_transactions',
-        filter: `user_id=eq.${user.id}`
-      }, fetchPointsHistory)
-      .subscribe();
-    
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [user, getToken, limit]);
 
   return {

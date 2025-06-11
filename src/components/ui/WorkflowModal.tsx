@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Star, Download, Tag, User, Calendar, ShoppingCart, Loader, Check } from 'lucide-react';
+import { X, Star, Download, Tag, User, Calendar, ShoppingCart, Loader, Check, Plus } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import { formatDate, formatCurrency } from '../../utils/helpers';
 import { useCart } from '../../contexts/CartContext';
@@ -153,7 +153,7 @@ const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
                             </>
                           ) : (
                             <>
-                              <ShoppingCart className="w-4 h-4" />
+                              <Plus className="w-4 h-4" />
                               Add to Cart
                             </>
                           )}

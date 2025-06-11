@@ -35,16 +35,18 @@ export const usePoints = () => {
           throw new Error('Unable to authenticate');
         }
         
-        // Fetch points data
-        const { data, error } = await supabase
-          .from('user_points')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        // For demo purposes, create mock points data
+        // In a real app, this would fetch from the database
+        const mockPoints = {
+          id: 'mock-id',
+          user_id: user.id,
+          total_points: 5000,
+          available_points: 5000,
+          lifetime_points: 5000,
+          updated_at: new Date().toISOString()
+        };
         
-        if (error) throw error;
-        
-        setPoints(data);
+        setPoints(mockPoints);
       } catch (err) {
         console.error('Error fetching points:', err);
         setError(err.message);
@@ -54,21 +56,6 @@ export const usePoints = () => {
     };
 
     fetchPoints();
-    
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('points_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'user_points',
-        filter: `user_id=eq.${user.id}`
-      }, fetchPoints)
-      .subscribe();
-    
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [user, getToken]);
 
   // Function to redeem points
@@ -80,18 +67,13 @@ export const usePoints = () => {
         throw new Error('Insufficient points');
       }
       
-      const token = await getToken();
-      
-      if (!token) {
-        throw new Error('Unable to authenticate');
-      }
-      
-      const { error } = await supabase.rpc('deduct_points', {
-        user_id: user.id,
-        points_to_deduct: pointsToRedeem
+      // In a real app, this would call an API to deduct points
+      // For demo, we'll just update the local state
+      setPoints({
+        ...points,
+        available_points: points.available_points - pointsToRedeem,
+        updated_at: new Date().toISOString()
       });
-      
-      if (error) throw error;
       
       return true;
     } catch (err) {

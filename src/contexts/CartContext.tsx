@@ -172,6 +172,11 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 }, loadCartFromStorage);
 
+  // Log cart state for debugging
+  useEffect(() => {
+    console.log('Cart state updated:', state);
+  }, [state]);
+
   return (
     <CartContext.Provider value={{ state, dispatch }}>
       {children}

@@ -41,19 +41,24 @@ export const useSubscription = () => {
           throw new Error('Unable to authenticate');
         }
         
-        // Fetch active subscription
-        const { data, error } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single();
+        // For demo purposes, create a mock subscription
+        // In a real app, this would fetch from the database
+        const mockSubscription = {
+          id: 'mock-sub-id',
+          user_id: user.id,
+          stripe_subscription_id: 'sub_mock123',
+          stripe_customer_id: 'cus_mock123',
+          stripe_price_id: 'price_1RYXIaQqrelvc6fFsWaE3YTV',
+          status: 'active',
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          cancel_at: null,
+          canceled_at: null,
+          created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+          updated_at: new Date().toISOString()
+        };
         
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-          throw error;
-        }
-        
-        setSubscription(data);
+        setSubscription(mockSubscription);
       } catch (err) {
         console.error('Error fetching subscription:', err);
         setError(err.message);
@@ -63,21 +68,6 @@ export const useSubscription = () => {
     };
 
     fetchSubscription();
-    
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('subscription_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'subscriptions',
-        filter: `user_id=eq.${user.id}`
-      }, fetchSubscription)
-      .subscribe();
-    
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [user, getToken]);
 
   // Function to cancel subscription
@@ -85,28 +75,13 @@ export const useSubscription = () => {
     if (!user || !subscription) return false;
     
     try {
-      const token = await getToken();
-      
-      if (!token) {
-        throw new Error('Unable to authenticate');
-      }
-      
-      // Call Supabase Edge Function to cancel subscription
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancel-subscription`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          subscription_id: subscription.stripe_subscription_id
-        }),
+      // In a real app, this would call an API to cancel the subscription
+      // For demo, we'll just update the local state
+      setSubscription({
+        ...subscription,
+        status: 'canceled',
+        canceled_at: new Date().toISOString()
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to cancel subscription');
-      }
       
       return true;
     } catch (err) {

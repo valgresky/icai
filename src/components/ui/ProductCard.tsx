@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Loader, Check, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Loader, Check, AlertCircle, Plus } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import { useCart } from '../../contexts/CartContext';
 import { formatCurrency } from '../../utils/helpers';
@@ -92,7 +92,7 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
           </>
         ) : (
           <>
-            <ShoppingCart className="w-5 h-5" />
+            <Plus className="w-5 h-5" />
             Add to Cart
           </>
         )}
