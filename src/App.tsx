@@ -11,6 +11,7 @@ import CreatorPage from './pages/CreatorPage';
 import PricingPage from './pages/PricingPage';
 import SuccessPage from './pages/SuccessPage';
 import BrowserAgentPage from './pages/BrowserAgentPage';
+import CheckoutPage from './pages/CheckoutPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -70,6 +71,7 @@ function App() {
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/success" element={<SuccessPage />} />
               <Route path="/browser-agent" element={<BrowserAgentPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
               
               {/* Protected Routes */}
               <Route 

@@ -43,7 +43,6 @@ const WorkflowCard = ({
 }: WorkflowCardProps) => {
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -149,12 +148,10 @@ const WorkflowCard = ({
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleAddToCart}
-                    disabled={purchaseLoading || addedToCart}
+                    disabled={addedToCart}
                     title="Add to Cart"
                   >
-                    {purchaseLoading ? (
-                      <Loader className="w-4 h-4 animate-spin" />
-                    ) : addedToCart ? (
+                    {addedToCart ? (
                       <Check className="w-4 h-4" />
                     ) : (
                       <ShoppingCart className="w-4 h-4" />
