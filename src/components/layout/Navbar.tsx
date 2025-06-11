@@ -22,6 +22,7 @@ const Navbar = () => {
   const links = [
     { href: '/', label: 'Home' },
     { href: '/marketplace', label: 'Marketplace' },
+    { href: '/browser-agent', label: 'Browser Agent' },
     { href: '/pricing', label: 'Pricing' },
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/creator', label: 'Creator Portal' },
