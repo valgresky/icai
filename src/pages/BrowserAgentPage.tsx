@@ -64,8 +64,8 @@ const BrowserAgentPage = () => {
 
   const startBrowserSession = async (url: string, instructions: string) => {
     try {
-      // Your specific n8n webhook URL
-      const webhookUrl = 'https://auto.owaiken.com/webhook/0e80e6c0-cde2-4314-a073-8a38a856332f';
+      // Updated webhook URL as requested
+      const webhookUrl = 'https://auto.owaiken.com/webhook/0c597b85-c550-4bc3-b4d3-e1b5f37553d7';
       
       const response = await fetch(webhookUrl, {
         method: 'POST',
