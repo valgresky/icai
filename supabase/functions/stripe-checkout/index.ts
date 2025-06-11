@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import Stripe from 'https://esm.sh/stripe@14.21.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,11 +8,14 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+interface CheckoutItem {
+  price_id: string;
+  quantity: number;
+}
+
 interface CheckoutRequest {
-  items: Array<{
-    price_id: string;
-    quantity: number;
-  }>;
+  items: CheckoutItem[];
+  points_to_redeem?: number;
   success_url?: string;
   cancel_url?: string;
 }
@@ -49,14 +53,14 @@ serve(async (req) => {
     }
 
     // Parse the request body
-    const { items, success_url, cancel_url }: CheckoutRequest = await req.json()
+    const { items, points_to_redeem = 0, success_url, cancel_url }: CheckoutRequest = await req.json()
 
     if (!items || items.length === 0) {
       throw new Error('No items provided')
     }
 
     // Initialize Stripe
-    const stripe = new (await import('https://esm.sh/stripe@14.21.0')).default(
+    const stripe = new Stripe(
       Deno.env.get('STRIPE_SECRET_KEY') ?? '',
       {
         apiVersion: '2023-10-16',
@@ -92,6 +96,23 @@ serve(async (req) => {
         })
     }
 
+    // Apply points discount if applicable
+    let discountAmount = 0
+    if (points_to_redeem > 0) {
+      // 100 points = $1 discount
+      discountAmount = Math.floor(points_to_redeem / 100) * 100 // Convert to cents
+      
+      // Deduct points from user's account
+      const { error: pointsError } = await supabaseClient.rpc('deduct_points', {
+        user_id: user.id,
+        points_to_deduct: points_to_redeem
+      })
+      
+      if (pointsError) {
+        throw new Error(`Failed to apply points: ${pointsError.message}`)
+      }
+    }
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
@@ -102,10 +123,16 @@ serve(async (req) => {
       })),
       mode: 'payment',
       success_url: success_url || `${req.headers.get('origin')}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${req.headers.get('origin')}/marketplace`,
+      cancel_url: cancel_url || `${req.headers.get('origin')}/checkout`,
       metadata: {
         user_id: user.id,
+        points_redeemed: points_to_redeem.toString(),
       },
+      discounts: discountAmount > 0 ? [
+        {
+          coupon: await createOrGetPointsDiscountCoupon(stripe, discountAmount),
+        }
+      ] : undefined,
     })
 
     return new Response(
@@ -126,3 +153,25 @@ serve(async (req) => {
     )
   }
 })
+
+// Helper function to create or get a coupon for points discount
+async function createOrGetPointsDiscountCoupon(stripe: Stripe, amountInCents: number): Promise<string> {
+  const couponId = `points-discount-${amountInCents}`
+  
+  try {
+    // Try to retrieve existing coupon
+    const existingCoupon = await stripe.coupons.retrieve(couponId)
+    return existingCoupon.id
+  } catch (error) {
+    // Create new coupon if it doesn't exist
+    const newCoupon = await stripe.coupons.create({
+      id: couponId,
+      amount_off: amountInCents,
+      currency: 'usd',
+      name: `Points Discount ($${amountInCents / 100})`,
+      max_redemptions: 1, // One-time use
+      duration: 'once',
+    })
+    return newCoupon.id
+  }
+}

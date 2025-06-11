@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Trash2, Plus, Minus, CreditCard, ArrowLeft, Loader } from 'lucide-react';
-import { useUser, useAuth } from '@clerk/clerk-react';
+import { ShoppingCart, Trash2, Plus, Minus, CreditCard, ArrowLeft, Loader, Coins } from 'lucide-react';
+import { useUser, useAuth, SignInButton } from '@clerk/clerk-react';
 import { useCart } from '../contexts/CartContext';
 import { formatCurrency } from '../utils/helpers';
 import { workflows } from '../data/mockData';
+import { usePoints } from '../hooks/usePoints';
+import PointsRedemption from '../components/ui/PointsRedemption';
 
 const CheckoutPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const { user } = useUser();
   const { getToken } = useAuth();
   const { state, dispatch } = useCart();
+  const { points } = usePoints();
   const navigate = useNavigate();
+
+  // Calculate discount amount from points (100 points = $1)
+  const discountAmount = Math.floor(pointsToRedeem / 100);
+  const finalTotal = Math.max(0, state.total - discountAmount);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -37,10 +45,13 @@ const CheckoutPage = () => {
     dispatch({ type: 'REMOVE_ITEM', payload: id });
   };
 
+  const handlePointsChange = (points: number) => {
+    setPointsToRedeem(points);
+  };
+
   const handleCheckout = async () => {
     if (!user) {
-      navigate('/sign-in');
-      return;
+      return; // The sign-in button will be shown instead
     }
 
     setLoading(true);
@@ -53,14 +64,11 @@ const CheckoutPage = () => {
         throw new Error('Unable to authenticate. Please sign in again.');
       }
 
-      // Prepare checkout items with Stripe price IDs
-      const checkoutItems = state.items.map(item => {
-        const workflow = workflows.find(w => w.id === item.id);
-        return {
-          price_id: workflow?.stripeProductId || '',
-          quantity: item.quantity
-        };
-      }).filter(item => item.price_id); // Remove items without price IDs
+      // Prepare checkout items
+      const checkoutItems = state.items.map(item => ({
+        price_id: item.priceId || '',
+        quantity: item.quantity
+      })).filter(item => item.price_id); // Remove items without price IDs
 
       if (checkoutItems.length === 0) {
         throw new Error('No valid items for checkout');
@@ -74,6 +82,7 @@ const CheckoutPage = () => {
         },
         body: JSON.stringify({
           items: checkoutItems,
+          points_to_redeem: pointsToRedeem,
           success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/checkout`,
         }),
@@ -122,11 +131,11 @@ const CheckoutPage = () => {
             className="mb-8"
           >
             <button
-              onClick={() => navigate('/marketplace')}
+              onClick={() => navigate(-1)}
               className="btn-ghost mb-4 flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Marketplace
+              Back
             </button>
             <h1 className="flex items-center gap-3">
               <ShoppingCart className="w-8 h-8 text-primary-500" />
@@ -150,30 +159,44 @@ const CheckoutPage = () => {
                 
                 <div className="space-y-4">
                   {state.items.map((item) => {
-                    const workflow = workflows.find(w => w.id === item.id);
-                    if (!workflow) return null;
-
+                    // Find workflow details if it's a workflow
+                    const workflow = item.type === 'workflow' ? 
+                      workflows.find(w => w.id === item.id) : null;
+                    
                     return (
-                      <div key={item.id} className="glass-card p-4 flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0">
-                          <img
-                            src={workflow.image}
-                            alt={workflow.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                      <div key={item.id} className="glass-card p-4 flex flex-col sm:flex-row items-start gap-4">
+                        {/* Image - Only show if available */}
+                        {(item.image || (workflow && workflow.image)) && (
+                          <div className="w-full sm:w-16 h-16 rounded-lg overflow-hidden shrink-0">
+                            <img
+                              src={item.image || (workflow ? workflow.image : '')}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                         
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-lg line-clamp-1">{workflow.title}</h3>
-                          <p className="text-sm text-neutral-400 line-clamp-2">{workflow.description}</p>
+                        {/* Item details */}
+                        <div className="flex-1 min-w-0 w-full">
+                          <h3 className="font-medium text-lg line-clamp-1">{item.title}</h3>
+                          {workflow && (
+                            <p className="text-sm text-neutral-400 line-clamp-2">{workflow.description}</p>
+                          )}
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="text-primary-400 text-sm">{workflow.category}</span>
-                            <span className="text-neutral-600">•</span>
-                            <span className="text-neutral-400 text-sm">{workflow.downloads} downloads</span>
+                            {workflow && (
+                              <>
+                                <span className="text-primary-400 text-sm">{workflow.category}</span>
+                                <span className="text-neutral-600">•</span>
+                              </>
+                            )}
+                            <span className="text-neutral-400 text-sm">
+                              {item.type === 'workflow' ? `${workflow?.downloads || 0} downloads` : ''}
+                            </span>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-3">
+                        {/* Price and quantity controls */}
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end mt-3 sm:mt-0">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
@@ -228,17 +251,37 @@ const CheckoutPage = () => {
                     <span>Subtotal ({state.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
                     <span>{formatCurrency(state.total)}</span>
                   </div>
+                  
+                  {pointsToRedeem > 0 && (
+                    <div className="flex justify-between text-primary-400">
+                      <span className="flex items-center gap-1">
+                        <Coins className="w-4 h-4" />
+                        Points Discount
+                      </span>
+                      <span>-{formatCurrency(discountAmount)}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between text-sm text-neutral-400">
                     <span>Processing Fee</span>
                     <span>Free</span>
                   </div>
+                  
                   <div className="border-t border-neutral-800 pt-3">
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Total</span>
-                      <span>{formatCurrency(state.total)}</span>
+                      <span>{formatCurrency(finalTotal)}</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Points Redemption */}
+                {user && points && points.available_points >= 100 && (
+                  <PointsRedemption 
+                    onPointsChange={handlePointsChange}
+                    className="mb-6"
+                  />
+                )}
 
                 {error && (
                   <div className="mb-4 p-3 bg-error-DEFAULT/10 border border-error-DEFAULT/20 rounded-lg">
@@ -246,23 +289,32 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
-                <button
-                  onClick={handleCheckout}
-                  disabled={loading || state.items.length === 0}
-                  className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <>
-                      <Loader className="w-5 h-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
+                {user ? (
+                  <button
+                    onClick={handleCheckout}
+                    disabled={loading || state.items.length === 0}
+                    className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader className="w-5 h-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5" />
+                        Proceed to Payment
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <SignInButton mode="modal">
+                    <button className="btn-primary w-full py-3 flex items-center justify-center gap-2">
                       <CreditCard className="w-5 h-5" />
-                      Proceed to Payment
-                    </>
-                  )}
-                </button>
+                      Sign In to Checkout
+                    </button>
+                  </SignInButton>
+                )}
 
                 <div className="mt-4 text-center">
                   <p className="text-xs text-neutral-500">

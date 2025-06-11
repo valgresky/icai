@@ -46,7 +46,7 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 20 }}
+            transition={{ type: "spring", damping: 20 }}
             className="fixed top-0 right-0 h-full w-full max-w-md bg-background shadow-xl z-50 flex flex-col"
           >
             {/* Header */}
@@ -88,26 +88,31 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
               ) : (
                 <div className="space-y-4">
                   {state.items.map((item) => {
-                    const workflow = workflows.find(w => w.id === item.id);
-                    if (!workflow) return null;
-
+                    // Find workflow details if it's a workflow
+                    const workflow = item.type === 'workflow' ? 
+                      workflows.find(w => w.id === item.id) : null;
+                    
                     return (
                       <div
                         key={item.id}
                         className="glass-card p-4"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
-                            <img
-                              src={workflow.image}
-                              alt={workflow.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
+                          {item.image && (
+                            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
+                              <img
+                                src={item.image || (workflow ? workflow.image : '')}
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
                           
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-sm line-clamp-2">{workflow.title}</h3>
-                            <p className="text-xs text-neutral-400 mt-1">{workflow.category}</p>
+                            <h3 className="font-medium text-sm line-clamp-2">{item.title}</h3>
+                            {workflow && (
+                              <p className="text-xs text-neutral-400 mt-1">{workflow.category}</p>
+                            )}
                             <div className="flex items-center justify-between mt-2">
                               <span className="font-semibold text-sm">{formatCurrency(item.price)}</span>
                               <button

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Download, Tag, User, Calendar, ShoppingCart, Loader, Check } from 'lucide-react';
-import { useUser, useAuth } from '@clerk/clerk-react';
+import { useUser } from '@clerk/clerk-react';
 import { formatDate, formatCurrency } from '../../utils/helpers';
 import { useCart } from '../../contexts/CartContext';
 
@@ -30,8 +30,13 @@ interface WorkflowModalProps {
 const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
   const [addedToCart, setAddedToCart] = useState(false);
   const { user } = useUser();
-  const { getToken } = useAuth();
-  const { dispatch } = useCart();
+  const { dispatch, state } = useCart();
+  
+  // Check if item is already in cart
+  const isInCart = state.items.some(item => 
+    (item.type === 'workflow' && item.id === workflow.id) || 
+    (item.priceId === workflow.stripeProductId)
+  );
 
   // Close on escape key
   useEffect(() => {
@@ -138,13 +143,13 @@ const WorkflowModal = ({ workflow, isOpen, onClose }: WorkflowModalProps) => {
                       {workflow.stripeProductId && workflow.price !== null && (
                         <button
                           onClick={handleAddToCart}
-                          disabled={addedToCart}
+                          disabled={addedToCart || isInCart}
                           className="btn-primary mt-2 flex items-center gap-2"
                         >
-                          {addedToCart ? (
+                          {addedToCart || isInCart ? (
                             <>
                               <Check className="w-4 h-4" />
-                              Added to Cart
+                              {addedToCart ? "Added to Cart" : "In Cart"}
                             </>
                           ) : (
                             <>

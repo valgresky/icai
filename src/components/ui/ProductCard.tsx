@@ -18,14 +18,19 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const { user } = useUser();
-  const { dispatch } = useCart();
+  const { dispatch, state } = useCart();
+  
+  // Check if product is already in cart
+  const isInCart = state.items.some(item => item.priceId === priceId);
 
   const handleAddToCart = () => {
     try {
+      setLoading(true);
+      
       dispatch({
         type: 'ADD_ITEM',
         payload: {
-          id: priceId,
+          id: priceId, // Use priceId as the unique identifier
           title: name,
           price: price,
           quantity: 1,
@@ -39,6 +44,8 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
     } catch (error) {
       console.error('Error adding to cart:', error);
       setError('Failed to add item to cart');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,15 +80,15 @@ const ProductCard = ({ priceId, name, description, mode, price }: ProductCardPro
 
       <button
         onClick={handleAddToCart}
-        disabled={loading || success}
+        disabled={loading || success || isInCart}
         className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
           <Loader className="w-5 h-5 animate-spin" />
-        ) : success ? (
+        ) : success || isInCart ? (
           <>
             <Check className="w-5 h-5" />
-            Added to Cart
+            {success ? "Added to Cart" : "In Cart"}
           </>
         ) : (
           <>

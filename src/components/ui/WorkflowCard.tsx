@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, Copy, Check, Wrench, ShoppingCart, Loader, Plus } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
-import { formatCurrency } from '../../utils/helpers';
 import { useCart } from '../../contexts/CartContext';
+import { formatCurrency } from '../../utils/helpers';
 import WorkflowModal from './WorkflowModal';
 
 interface WorkflowCardProps {
@@ -45,8 +45,14 @@ const WorkflowCard = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const { user } = useUser();
-  const { dispatch } = useCart();
+  const { dispatch, state } = useCart();
   const isFree = price === 0 || price === null;
+  
+  // Check if item is already in cart
+  const isInCart = state.items.some(item => 
+    (item.type === 'workflow' && item.id === id) || 
+    (item.priceId === stripeProductId)
+  );
 
   const handleCopy = async () => {
     if (code) {
@@ -71,7 +77,15 @@ const WorkflowCard = ({
     try {
       dispatch({
         type: 'ADD_ITEM',
-        payload: id
+        payload: {
+          id,
+          title,
+          price,
+          quantity: 1,
+          priceId: stripeProductId,
+          type: 'workflow',
+          image
+        }
       });
       
       // Brief delay for visual feedback
@@ -147,14 +161,19 @@ const WorkflowCard = ({
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleAddToCart}
-                    disabled={addingToCart}
-                    title="Add to Cart"
+                    disabled={addingToCart || isInCart}
+                    title={isInCart ? "Already in cart" : "Add to Cart"}
                   >
                     {addingToCart ? (
                       <Loader className="w-4 h-4 animate-spin" />
+                    ) : isInCart ? (
+                      <Check className="w-4 h-4" />
                     ) : (
                       <Plus className="w-4 h-4" />
                     )}
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-background-secondary px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover/cart:opacity-100 transition-opacity">
+                      {isInCart ? "In Cart" : "Add to Cart"}
+                    </span>
                   </motion.button>
                 )}
 
