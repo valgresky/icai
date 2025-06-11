@@ -13,7 +13,6 @@ import {
   CheckCircle,
   Zap
 } from 'lucide-react';
-import { cn } from '../utils/helpers';
 
 interface BrowserSession {
   liveViewUrl: string;
@@ -61,8 +60,8 @@ const BrowserAgentPage = () => {
 
   const startBrowserSession = async (url: string, instructions: string) => {
     try {
-      // Replace with your actual n8n webhook URL
-      const webhookUrl = process.env.VITE_N8N_BROWSER_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/browser-agent';
+      // Your specific n8n webhook URL
+      const webhookUrl = 'https://auto.owaiken.com/webhook/0e80e6c0-cde2-4314-a073-8a38a856332f';
       
       const response = await fetch(webhookUrl, {
         method: 'POST',
