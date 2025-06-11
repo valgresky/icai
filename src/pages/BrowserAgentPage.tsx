@@ -137,8 +137,7 @@ const BrowserAgentPage = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStartSession = async () => {
     setError('');
     
     // Validation
@@ -212,6 +211,11 @@ const BrowserAgentPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleStartSession();
   };
 
   const handleCopyTranscript = async () => {
@@ -343,36 +347,17 @@ const BrowserAgentPage = () => {
                     </div>
                   )}
 
-                  <div className="flex gap-3">
-                    {!sessionActive ? (
-                      <button
-                        type="submit"
-                        disabled={isLoading || !url || !instructions}
-                        className="btn-primary flex-1 py-3 flex items-center justify-center gap-2"
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader className="w-5 h-5 animate-spin" />
-                            Starting...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-5 h-5" />
-                            Start Session
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleNewSession}
-                        className="btn-ghost flex-1 py-3 flex items-center justify-center gap-2"
-                      >
-                        <RefreshCw className="w-5 h-5" />
-                        New Session
-                      </button>
-                    )}
-                  </div>
+                  {/* Only show New Session button when session is active */}
+                  {sessionActive && (
+                    <button
+                      type="button"
+                      onClick={handleNewSession}
+                      className="btn-ghost w-full py-3 flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      New Session
+                    </button>
+                  )}
                 </form>
 
                 {/* Quick Examples */}
@@ -524,9 +509,21 @@ const BrowserAgentPage = () => {
                       <span className="w-3 h-3 bg-green-500 rounded-full"></span>
                     </div>
                     
+                    {/* Session Status */}
+                    <div className="session-status flex items-center gap-2">
+                      {sessionActive ? (
+                        <>
+                          <span className="status-dot active w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                          <span className="status-text text-sm text-green-400">Session Active</span>
+                        </>
+                      ) : (
+                        <span className="status-text text-sm text-neutral-400">No active session</span>
+                      )}
+                    </div>
+                    
                     {/* URL Bar */}
                     <div className="url-bar flex-1 max-w-md bg-neutral-800 rounded-md px-3 py-1 text-sm text-neutral-300">
-                      {currentUrl || 'No active session'}
+                      {currentUrl || ''}
                     </div>
                   </div>
                   
@@ -567,20 +564,54 @@ const BrowserAgentPage = () => {
                 {/* Browser Content */}
                 {!isMinimized && (
                   <div className="flex-1 bg-neutral-900 rounded-b-lg overflow-hidden relative">
-                    {!session ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center mb-6">
-                          <Globe className="w-10 h-10 text-neutral-600" />
+                    {!sessionActive ? (
+                      /* No Session State - Show Start Button */
+                      <div className="browser-content flex flex-col items-center justify-center h-full text-center p-8">
+                        <div className="no-session-container">
+                          <div className="globe-icon mb-6">
+                            <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center mx-auto">
+                              <Globe className="w-10 h-10 text-neutral-600" />
+                            </div>
+                          </div>
+                          <h3 className="text-xl font-semibold mb-2">No Active Browser Session</h3>
+                          <p className="text-neutral-400 mb-6">
+                            Start a browser session to see the live view here
+                          </p>
+                          
+                          <button 
+                            className="start-session-btn bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-600 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 mx-auto transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-primary-500/40"
+                            onClick={handleStartSession}
+                            disabled={!url || !instructions || isLoading}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader className="w-5 h-5 animate-spin" />
+                                Starting...
+                              </>
+                            ) : (
+                              <>
+                                <span className="btn-icon">▶</span>
+                                Start Session
+                              </>
+                            )}
+                          </button>
+                          
+                          <p className="hint-text text-sm text-neutral-500 mt-4">
+                            This area will show a real-time view of the browser once a session begins
+                          </p>
                         </div>
-                        <h3 className="text-xl font-semibold mb-2">No Active Browser Session</h3>
-                        <p className="text-neutral-400 mb-4">
-                          Start a browser session to see the live view here
-                        </p>
-                        <div className="text-sm text-neutral-500">
-                          This area will show a real-time view of the browser once a session begins
+                      </div>
+                    ) : isLoading ? (
+                      /* Loading State */
+                      <div className="browser-content flex flex-col items-center justify-center h-full text-center">
+                        <div className="session-loading">
+                          <div className="w-12 h-12 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mb-4"></div>
+                          <h3 className="text-xl font-semibold mb-2">Starting Browser Session...</h3>
+                          <p className="text-neutral-400">Initializing automated browser</p>
                         </div>
                       </div>
                     ) : showBrowser ? (
+                      /* Active Session with Browser View */
                       <>
                         {/* Loading Skeleton */}
                         {isIframeLoading && (
@@ -600,7 +631,7 @@ const BrowserAgentPage = () => {
                         {/* Iframe */}
                         <iframe
                           ref={iframeRef}
-                          src={session.liveViewUrl}
+                          src={session?.liveViewUrl}
                           className="browser-iframe w-full h-full border-0"
                           title="Live Browser View"
                           sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
@@ -614,11 +645,12 @@ const BrowserAgentPage = () => {
                             <span className="text-red-400">LIVE</span>
                           </div>
                           <div className="text-neutral-400">
-                            Session: {session.sessionId.slice(0, 8)}...
+                            Session: {session?.sessionId.slice(0, 8)}...
                           </div>
                         </div>
                       </>
                     ) : (
+                      /* Session Ready - Show Browser Button */
                       <div className="flex flex-col items-center justify-center h-full text-center">
                         <div className="w-20 h-20 rounded-full bg-accent-500/20 flex items-center justify-center mb-6">
                           <Eye className="w-10 h-10 text-accent-500" />
@@ -731,12 +763,28 @@ const BrowserAgentPage = () => {
           animation: shimmer 2s infinite;
         }
 
+        .status-dot.active {
+          animation: pulse 2s infinite;
+        }
+
         @keyframes shimmer {
           0% {
             background-position: -200% 0;
           }
           100% {
             background-position: 200% 0;
+          }
+        }
+
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+          }
+          70% {
+            box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
           }
         }
 
