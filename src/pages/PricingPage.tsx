@@ -5,60 +5,93 @@ import { cn } from '../utils/helpers';
 import ProductCard from '../components/ui/ProductCard';
 import CheckoutForm from '../components/ui/CheckoutForm';
 import PointsDisplay from '../components/ui/PointsDisplay';
-import { products } from '../stripe-config';
-import { workflows } from '../data/mockData';
 import { useUser } from '@clerk/clerk-react';
+
+// Define product interface
+interface Product {
+  priceId: string;
+  name: string;
+  description: string;
+  mode: 'payment' | 'subscription';
+  price: number;
+}
+
+// Define products directly in the component
+const products: Product[] = [
+  // Individual Workflows - $20-$40
+  {
+    priceId: 'price_1RYX9PQqrelvc6fFzP2IQv9x',
+    name: 'RAG Pipeline & Chatbot',
+    description: 'Build a document-based Q&A system that can understand and answer questions from your uploaded documents. Perfect for creating knowledge bases, FAQ bots, and intelligent document search systems.',
+    mode: 'payment',
+    price: 20
+  },
+  {
+    priceId: 'price_1RYX9nQqrelvc6fFxrL4SRcY',
+    name: 'Customer Support Workflow',
+    description: 'Automate your email support with intelligent classification and auto-response capabilities. Routes emails to the right department and drafts contextual responses using AI.',
+    mode: 'payment',
+    price: 20
+  },
+  {
+    priceId: 'price_1RYXAAQqrelvc6fFdHwBC023',
+    name: 'LinkedIn Content Creator',
+    description: 'Generate engaging LinkedIn posts automatically by researching topics and creating professional content. Includes hashtag optimization and content scheduling capabilities.',
+    mode: 'payment',
+    price: 20
+  },
+  {
+    priceId: 'price_1RYXAWQqrelvc6fFyXz0UYBN',
+    name: 'Invoice Workflow',
+    description: 'Extract data from PDF invoices and automatically populate Google Sheets. Includes email notifications and database updates for seamless invoice processing.',
+    mode: 'payment',
+    price: 20
+  },
+  {
+    priceId: 'price_1RYXAxQqrelvc6fFaK6vr5xH',
+    name: 'First AI Agent',
+    description: 'Your introduction to AI agents with basic email, calendar, and contact management tools. Perfect for beginners looking to build their first autonomous assistant.',
+    mode: 'payment',
+    price: 20
+  },
+  // Subscription Products
+  {
+    priceId: 'price_1RYXIaQqrelvc6fFsWaE3YTV',
+    name: 'Workflow Club Membership',
+    description: 'Access all current workflows with new templates added monthly. Includes priority support, community access, and instant notifications when new workflows are released.',
+    mode: 'subscription',
+    price: 20
+  },
+  {
+    priceId: 'price_1RYXJ9Qqrelvc6fF5KWqwhKj',
+    name: 'Workflow Club Membership (Yearly)',
+    description: 'Access all current workflows with new templates added monthly. Includes priority support, community access, and instant notifications when new workflows are released. Annual members save over 12% compared to monthly billing.',
+    mode: 'subscription',
+    price: 200
+  },
+  // Service Products
+  {
+    priceId: 'price_1RYXKZQqrelvc6fFdhcLmm3M',
+    name: 'Workflow Installation',
+    description: 'Complete hands-on setup of any workflow in your n8n instance. Includes API credential configuration, thorough testing and troubleshooting, and a 30-minute training call to ensure you understand how to use and modify the workflow.',
+    mode: 'payment',
+    price: 50
+  },
+  {
+    priceId: 'price_1RYXLEQqrelvc6fFzVCHcPgt',
+    name: 'Custom Workflow Development',
+    description: 'Get a workflow built specifically for your unique requirements. Includes requirements gathering session, custom workflow design and architecture, full implementation and testing, comprehensive documentation, and 30 days of post-delivery support.',
+    mode: 'payment',
+    price: 500
+  }
+];
 
 const PricingPage = () => {
   const [filter, setFilter] = useState<'all' | 'payment' | 'subscription'>('all');
   const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>({});
-  const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { user } = useUser();
-
-  // Create a mapping of price IDs to actual prices from workflows
-  const workflowPricing: Record<string, number> = {};
-  workflows.forEach(workflow => {
-    if (workflow.stripeProductId && workflow.price !== null) {
-      workflowPricing[workflow.stripeProductId] = workflow.price;
-    }
-  });
-
-  // Fallback pricing for products not in workflows
-  const fallbackPricing: Record<string, number> = {
-    'price_1RYXLZQqrelvc6fFfuApb26b': 50,
-    'price_1RYXLEQqrelvc6fFzVCHcPgt': 500,
-    'price_1RYXKZQqrelvc6fFdhcLmm3M': 50,
-    'price_1RYXJtQqrelvc6fFVYVxxLqo': 500,
-    'price_1RYXJ9Qqrelvc6fF5KWqwhKj': 200,
-    'price_1RYXIaQqrelvc6fFsWaE3YTV': 20,
-    'price_1RYXH3Qqrelvc6fFwyWtZ4Dz': 35,
-    'price_1RYXGfQqrelvc6fFVAoaAYA5': 35,
-    'price_1RYXGIQqrelvc6fF8i751vc3': 35,
-    'price_1RYXFtQqrelvc6fFbLlBOTGH': 30,
-    'price_1RYXFNQqrelvc6fFcnD5bpU0': 30,
-    'price_1RYXEwQqrelvc6fFcBwCyEIf': 30,
-    'price_1RYXEaQqrelvc6fFEhiFUBjb': 30,
-    'price_1RYXEBQqrelvc6fFJV4Wqsjw': 30,
-    'price_1RYXDqQqrelvc6fFXD5N73Jp': 30,
-    'price_1RYXDSQqrelvc6fFdYjDno0Z': 30,
-    'price_1RYXCtQqrelvc6fFwFop8COe': 40,
-    'price_1RYXCUQqrelvc6fFR2RVSwDn': 40,
-    'price_1RYXC9Qqrelvc6fFS7dBHjGT': 40,
-    'price_1RYXBnQqrelvc6fFAyFqbDoZ': 40,
-    'price_1RYXBQQqrelvc6fFYVsVS6CO': 40,
-    'price_1RYXAxQqrelvc6fFaK6vr5xH': 20,
-    'price_1RYXAWQqrelvc6fFyXz0UYBN': 20,
-    'price_1RYXAAQqrelvc6fFdHwBC023': 20,
-    'price_1RYX9nQqrelvc6fFxrL4SRcY': 20,
-    'price_1RYX9PQqrelvc6fFzP2IQv9x': 20,
-    'price_1RYX8tQqrelvc6fF10usHmt1': 350,
-    'price_1RYX8BQqrelvc6fFpmfVFUF0': 1500,
-    'price_1RYX7lQqrelvc6fFiwaGIrjP': 80,
-    'price_1RYX7IQqrelvc6fFrmdbl55h': 30,
-    'price_1RYX6oQqrelvc6fFoiPWHD6c': 100,
-    'price_1RYWzgQqrelvc6fFVONGQjBy': 50,
-  };
 
   const filteredProducts = products.filter(product => {
     if (filter === 'all') return true;
@@ -83,49 +116,14 @@ const PricingPage = () => {
       issues.push('Missing VITE_SUPABASE_ANON_KEY');
     }
     
-    // Check if products have valid price IDs
-    products.forEach(product => {
-      if (!product.priceId || product.priceId.includes('price_XXXXX')) {
-        issues.push(`Invalid priceId for ${product.name}: ${product.priceId}`);
-      }
-    });
-    
-    // Check workflow mapping
-    const workflowProductIds = workflows.map(w => w.stripeProductId).filter(Boolean);
-    const unmappedProducts = products.filter(product => 
-      !workflowProductIds.includes(product.priceId) && 
-      !fallbackPricing[product.priceId]
-    );
-    
-    unmappedProducts.forEach(product => {
-      issues.push(`No price mapping for product: ${product.name} (${product.priceId})`);
-    });
-    
     return issues;
   };
 
   // Debug logging and data exposure
   useEffect(() => {
     console.log('=== PRICING PAGE DEBUG ===');
-    console.log('Raw products from stripe-config:', products);
-    console.log('Raw workflows from mockData:', workflows);
     console.log('Filtered products:', filteredProducts);
     console.log('Number of products to display:', filteredProducts.length);
-    console.log('Workflow pricing mapping:', workflowPricing);
-    console.log('Fallback pricing mapping:', fallbackPricing);
-
-    // Log each product's details
-    filteredProducts.forEach((product, index) => {
-      const price = workflowPricing[product.priceId] || fallbackPricing[product.priceId] || 0;
-      console.log(`Product ${index + 1}:`, {
-        name: product.name,
-        priceId: product.priceId,
-        mode: product.mode,
-        price: price,
-        hasWorkflowMapping: !!workflowPricing[product.priceId],
-        hasFallbackMapping: !!fallbackPricing[product.priceId]
-      });
-    });
 
     // Environment check
     console.log('Environment check:', {
@@ -147,10 +145,7 @@ const PricingPage = () => {
     // Make data available in console for debugging
     const debugData = {
       products,
-      workflows,
       filteredProducts,
-      workflowPricing,
-      fallbackPricing,
       validationIssues,
       environment: {
         mode: import.meta.env.MODE,
@@ -208,10 +203,7 @@ const PricingPage = () => {
               <h4 className="font-semibold text-blue-400 mb-1">Data Counts:</h4>
               <div className="text-xs space-y-1">
                 <div>Products: {debugInfo.products?.length || 0}</div>
-                <div>Workflows: {debugInfo.workflows?.length || 0}</div>
                 <div>Filtered Products: {debugInfo.filteredProducts?.length || 0}</div>
-                <div>Workflow Mappings: {Object.keys(debugInfo.workflowPricing || {}).length}</div>
-                <div>Fallback Mappings: {Object.keys(debugInfo.fallbackPricing || {}).length}</div>
               </div>
             </div>
 
@@ -236,8 +228,7 @@ const PricingPage = () => {
                     name: debugInfo.filteredProducts[0].name,
                     priceId: debugInfo.filteredProducts[0].priceId,
                     mode: debugInfo.filteredProducts[0].mode,
-                    price: debugInfo.workflowPricing?.[debugInfo.filteredProducts[0].priceId] || 
-                           debugInfo.fallbackPricing?.[debugInfo.filteredProducts[0].priceId] || 0
+                    price: debugInfo.filteredProducts[0].price
                   }, null, 2)}
                 </pre>
               )}
@@ -271,7 +262,7 @@ const PricingPage = () => {
                     name={selectedProduct.name}
                     description={selectedProduct.description}
                     mode={selectedProduct.mode}
-                    price={workflowPricing[selectedProduct.priceId] || fallbackPricing[selectedProduct.priceId] || 0}
+                    price={selectedProduct.price}
                     onSuccess={() => {
                       // Handle success (redirect happens in the component)
                     }}
@@ -315,7 +306,7 @@ const PricingPage = () => {
               </div>
             )}
 
-            {/* Filter Buttons - Fixed with proper IDs */}
+            {/* Filter Buttons */}
             <div className="inline-flex items-center gap-2 bg-background-secondary p-1 rounded-lg">
               <button
                 id="filter-all"
@@ -393,7 +384,6 @@ const PricingPage = () => {
             >
               <ProductCard
                 {...product}
-                price={workflowPricing[product.priceId] || fallbackPricing[product.priceId] || 0}
               />
             </motion.div>
           ))}
@@ -403,14 +393,14 @@ const PricingPage = () => {
         <div className="max-w-3xl mx-auto mt-16 mb-8">
           <div className="glass-panel p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Coins className="w-5 h-5 text-primary-500" />
+              <Zap className="w-5 h-5 text-primary-500" />
               Earn and Redeem Points
             </h2>
             
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">
-                  <Coins className="w-5 h-5 text-primary-500" />
+                  <Zap className="w-5 h-5 text-primary-500" />
                 </div>
                 <div>
                   <h3 className="font-medium mb-1">Earn 100 Points for Every $1 Spent</h3>
@@ -423,7 +413,7 @@ const PricingPage = () => {
               
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-success-DEFAULT/20 flex items-center justify-center shrink-0">
-                  <ArrowDown className="w-5 h-5 text-success-DEFAULT" />
+                  <Check className="w-5 h-5 text-success-DEFAULT" />
                 </div>
                 <div>
                   <h3 className="font-medium mb-1">Redeem Points for Discounts</h3>
@@ -436,7 +426,7 @@ const PricingPage = () => {
               
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-secondary-500/20 flex items-center justify-center shrink-0">
-                  <ArrowUp className="w-5 h-5 text-secondary-500" />
+                  <Zap className="w-5 h-5 text-secondary-500" />
                 </div>
                 <div>
                   <h3 className="font-medium mb-1">Points Never Expire</h3>
