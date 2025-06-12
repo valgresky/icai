@@ -27,11 +27,12 @@ interface BrowserSession {
   liveViewUrl: string;
   sessionId: string;
   windowId: string;
+  result?: string;
 }
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'system' | 'success' | 'error' | 'loading';
+  type: 'user' | 'system' | 'success' | 'error' | 'loading' | 'result';
   content: string;
   timestamp: Date;
   icon?: string;
@@ -53,9 +54,11 @@ const BrowserAgentPage = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [browserViewHeight, setBrowserViewHeight] = useState(500);
   const [isTyping, setIsTyping] = useState(false);
+  const [userMessage, setUserMessage] = useState('');
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -87,7 +90,8 @@ const BrowserAgentPage = () => {
     system: { icon: '🤖', color: 'text-gray-400' },
     success: { icon: '✅', color: 'text-green-400' },
     error: { icon: '❌', color: 'text-red-400' },
-    loading: { icon: '⏳', color: 'text-yellow-400' }
+    loading: { icon: '⏳', color: 'text-yellow-400' },
+    result: { icon: '📊', color: 'text-purple-400' }
   };
 
   const addMessage = (type: ChatMessage['type'], content: string, icon?: string) => {
@@ -134,6 +138,59 @@ const BrowserAgentPage = () => {
     } catch (error) {
       console.error('Error:', error);
       throw error;
+    }
+  };
+
+  // Function to poll for results
+  const pollForResults = async (sessionId: string) => {
+    try {
+      const pollUrl = `https://auto.owaiken.com/api/sessions/${sessionId}/result`;
+      
+      const checkResult = async () => {
+        const response = await fetch(pollUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === 'completed' && data.result) {
+          // Update session with result
+          setSession(prev => prev ? {...prev, result: data.result} : null);
+          
+          // Add result message to chat
+          setIsTyping(false);
+          addMessage('result', data.result, '📊');
+          return true;
+        }
+        
+        return false;
+      };
+      
+      // Poll every 5 seconds for up to 2 minutes
+      let attempts = 0;
+      const maxAttempts = 24; // 2 minutes
+      
+      const poll = async () => {
+        if (attempts >= maxAttempts) {
+          addMessage('system', 'Polling for results timed out. The task may still be processing.', '⏱️');
+          return;
+        }
+        
+        attempts++;
+        const hasResult = await checkResult();
+        
+        if (!hasResult) {
+          setTimeout(poll, 5000);
+        }
+      };
+      
+      // Start polling
+      poll();
+      
+    } catch (error) {
+      console.error('Error polling for results:', error);
+      addMessage('error', 'Failed to retrieve results. Please try again.', '❌');
     }
   };
 
@@ -197,10 +254,15 @@ const BrowserAgentPage = () => {
       
       setTimeout(() => {
         setIsTyping(false);
-        addMessage('success', 'Task completed successfully!');
+        addMessage('success', 'Task in progress!');
         addMessage('system', '🔗 Live browser view is now available');
         setShowBrowser(true);
         setIsIframeLoading(false);
+        
+        // Start polling for results
+        if (sessionData && sessionData.sessionId) {
+          pollForResults(sessionData.sessionId);
+        }
       }, 6000);
       
     } catch (error) {
@@ -216,6 +278,26 @@ const BrowserAgentPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await handleStartSession();
+  };
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userMessage.trim()) return;
+    
+    // Add user message to chat
+    addMessage('user', userMessage);
+    
+    // Clear input
+    setUserMessage('');
+    
+    // Show typing indicator
+    setIsTyping(true);
+    
+    // Simulate AI response after a delay
+    setTimeout(() => {
+      setIsTyping(false);
+      addMessage('system', 'I\'m currently working on your task. You can see the progress in the browser view above. I\'ll provide a summary when the task is complete.');
+    }, 1500);
   };
 
   const handleCopyTranscript = async () => {
@@ -349,6 +431,26 @@ const BrowserAgentPage = () => {
                       </div>
                     )}
 
+                    {!sessionActive && (
+                      <button
+                        type="submit"
+                        disabled={!url || !instructions || isLoading}
+                        className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin" />
+                            Starting...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-5 h-5" />
+                            Start Session
+                          </>
+                        )}
+                      </button>
+                    )}
+
                     {/* Only show New Session button when session is active */}
                     {sessionActive && (
                       <button
@@ -424,7 +526,7 @@ const BrowserAgentPage = () => {
                   </div>
 
                   {/* Chat Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-3 px-1">
+                  <div className="flex-1 overflow-y-auto space-y-3 px-1 mb-4">
                     {messages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center">
                         <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mb-4">
@@ -445,14 +547,20 @@ const BrowserAgentPage = () => {
                             className={`flex items-start gap-3 p-3 rounded-lg ${
                               message.type === 'user' 
                                 ? 'bg-primary-500/10 border border-primary-500/20 ml-4' 
+                                : message.type === 'result'
+                                ? 'bg-secondary-500/10 border border-secondary-500/20 mr-4'
                                 : 'bg-neutral-800/50 mr-4'
                             }`}
                           >
-                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-xs">
+                            <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                              message.type === 'result' 
+                                ? 'bg-secondary-500/20 text-secondary-500'
+                                : 'bg-neutral-700'
+                            }`}>
                               {message.icon}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className={`text-sm ${messageTypes[message.type].color}`}>
+                              <div className={`text-sm ${messageTypes[message.type]?.color || 'text-white'}`}>
                                 {message.content}
                               </div>
                               <div className="text-xs text-neutral-500 mt-1">
@@ -486,6 +594,29 @@ const BrowserAgentPage = () => {
                     )}
                     <div ref={chatEndRef} />
                   </div>
+
+                  {/* Chat Input */}
+                  {sessionActive && (
+                    <form onSubmit={handleChatSubmit} className="mt-auto">
+                      <div className="relative">
+                        <input
+                          ref={chatInputRef}
+                          type="text"
+                          value={userMessage}
+                          onChange={(e) => setUserMessage(e.target.value)}
+                          placeholder="Ask a question about the task..."
+                          className="glass-card w-full pl-4 pr-12 py-3 rounded-full"
+                        />
+                        <button
+                          type="submit"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-primary-500 text-white rounded-full"
+                          disabled={!userMessage.trim()}
+                        >
+                          <Send className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -722,9 +853,9 @@ const BrowserAgentPage = () => {
                   <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-3">
                     <span className="text-yellow-500 font-bold">4</span>
                   </div>
-                  <h4 className="font-medium mb-2">Watch Live</h4>
+                  <h4 className="font-medium mb-2">Get Results</h4>
                   <p className="text-sm text-neutral-400">
-                    View the browser working in real-time in the cinematic browser view below
+                    Receive a detailed summary of findings and actions taken by the AI
                   </p>
                 </div>
               </div>
