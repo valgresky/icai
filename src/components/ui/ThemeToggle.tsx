@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Moon, Sun, Sparkles } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../providers/ThemeProvider';
 
 interface ThemeToggleProps {
@@ -14,7 +14,6 @@ const ThemeToggle = ({ className = '' }: ThemeToggleProps) => {
   const themes = [
     { value: 'dark', label: 'Dark', icon: Moon },
     { value: 'light', label: 'Light', icon: Sun },
-    { value: 'glass', label: 'Glass', icon: Sparkles },
   ] as const;
 
   const currentTheme = themes.find(t => t.value === theme) || themes[0];

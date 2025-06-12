@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 
-type Theme = 'dark' | 'light' | 'glass';
+type Theme = 'dark' | 'light';
 
 export const useTheme = () => {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check for stored theme preference
     const stored = localStorage.getItem('theme');
-    if (stored === 'dark' || stored === 'light' || stored === 'glass') return stored as Theme;
+    if (stored === 'dark' || stored === 'light') return stored as Theme;
     
     // Check system preference
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -18,7 +18,7 @@ export const useTheme = () => {
 
   useEffect(() => {
     // Remove all theme classes
-    document.documentElement.classList.remove('dark', 'light', 'glass');
+    document.documentElement.classList.remove('dark', 'light');
     
     // Add current theme class
     document.documentElement.classList.add(theme);
@@ -28,11 +28,7 @@ export const useTheme = () => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => {
-      if (prev === 'dark') return 'light';
-      if (prev === 'light') return 'glass';
-      return 'dark';
-    });
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
   return { theme, setTheme, toggleTheme };

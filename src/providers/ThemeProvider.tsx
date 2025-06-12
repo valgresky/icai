@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type Theme = 'dark' | 'light' | 'glass';
+type Theme = 'dark' | 'light';
 
 type ThemeProviderProps = {
   children: ReactNode;
@@ -29,7 +29,7 @@ export function ThemeProvider({
     const root = window.document.documentElement;
     
     // Remove all theme classes
-    root.classList.remove('light', 'dark', 'glass');
+    root.classList.remove('light', 'dark');
     
     // Add current theme class
     root.classList.add(theme);

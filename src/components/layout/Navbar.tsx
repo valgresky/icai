@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Workflow, Search, ShoppingCart, User, Sun, Moon, Sparkles } from 'lucide-react';
+import { Menu, X, Workflow, Search, ShoppingCart, User, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SignInButton, SignUpButton, UserButton, useUser, SignedIn, SignedOut, useClerk } from '@clerk/clerk-react';
 import { cn } from '../../utils/helpers';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../providers/ThemeProvider';
 import { useCart } from '../../contexts/CartContext';
 import CartDrawer from '../ui/CartDrawer';
 import SubscriptionStatus from '../ui/SubscriptionStatus';
@@ -15,7 +15,7 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const location = useLocation();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { user, isLoaded } = useUser();
   const { state } = useCart();
   const clerk = useClerk();
@@ -173,7 +173,7 @@ const Navbar = () => {
               <div className="flex items-center justify-between">
                 <ThemeToggle />
                 <span className="text-sm text-neutral-500">
-                  {theme === 'dark' ? 'Dark Mode' : theme === 'light' ? 'Light Mode' : 'Glass Mode'}
+                  {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
                 </span>
               </div>
               
